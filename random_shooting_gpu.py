@@ -33,14 +33,14 @@ def init_state_kernel(qpos: wp.array(dtype=float),
                       qpos0: wp.array(dtype=float), 
                       sampled_vels: wp.array(dtype=wp.vec3)):
     tid = wp.tid()
-    # Initialize each sample with the model's base configuration
+    # Each environment starts at the same base position
     for i in range(nq):
         qpos[tid * nq + i] = qpos0[i]
-    # Set initial velocity for the ball (indices 0, 1, 2)
+        
+    # Apply the unique sampled velocity for this environment
     qvel[tid * nv + 0] = sampled_vels[tid][0]
     qvel[tid * nv + 1] = sampled_vels[tid][1]
     qvel[tid * nv + 2] = sampled_vels[tid][2]
-    # Zero out other degrees of freedom (like angular velocity)
     for i in range(3, nv):
         qvel[tid * nv + i] = 0.0
 
@@ -52,10 +52,13 @@ def compute_running_costs_kernel(qpos: wp.array(dtype=float),
                                  costs: wp.array(dtype=float), 
                                  w_pos: float, w_vel: float):
     tid = wp.tid()
+    # Access the ball's position and velocity (first 3 components of qpos/qvel)
     p = wp.vec3(qpos[tid * nq + 0], qpos[tid * nq + 1], qpos[tid * nq + 2])
     v = wp.vec3(qvel[tid * nv + 0], qvel[tid * nv + 1], qvel[tid * nv + 2])
+    
     diff = p - target
-    costs[tid] += (wp.dot(diff, diff) * w_pos + wp.dot(v, v) * w_vel)
+    # L2 Norms for running cost
+    costs[tid] += (wp.length_sq(diff) * w_pos + wp.length_sq(v) * w_vel)
 
 @wp.kernel
 def compute_terminal_costs_kernel(qpos: wp.array(dtype=float), 
@@ -78,36 +81,57 @@ def compute_terminal_costs_kernel(qpos: wp.array(dtype=float),
     costs[tid] += (cost_term_pos + cost_term_vel)
 
 def main():
+    # Initialize Warp
     wp.init()
     device = "cuda" if wp.is_cuda_available() else "cpu"
     
     mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
+    # If mujoco_warp.Model fails, ensure you are using the high-level wrapper
     wp_model = mujoco_warp.Model(mj_model, device=device)
     num_steps = math.ceil(2.0 / mj_model.opt.timestep)
     
+    # Create batch states
     wp_state = wp_model.state(NUM_SAMPLES)
     wp_state_next = wp_model.state(NUM_SAMPLES)
     costs_wp = wp.zeros(NUM_SAMPLES, dtype=float, device=device)
     
     # 1. Sample trajectories
-    base_qvel = TARGET_POS - mj_model.qpos0[:3]
+    # We pull the starting position from the model to match the CPU version logic
+    starting_pos = mj_model.qpos0[:3]
+    base_qvel = TARGET_POS - starting_pos
     sampled_qvels_np = (base_qvel + np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))).astype(np.float32)
     sampled_qvels_wp = wp.from_numpy(sampled_qvels_np, dtype=wp.vec3, device=device)
     
-    # Initialize batch state
-    wp.launch(init_state_kernel, dim=NUM_SAMPLES, inputs=[wp_state.qpos, wp_state.qvel, wp_model.nq, wp_model.nv, wp.from_numpy(mj_model.qpos0.astype(np.float32), device=device), sampled_qvels_wp], device=device)
+    # Initialize the batch state on GPU
+    wp.launch(
+        kernel=init_state_kernel, 
+        dim=NUM_SAMPLES, 
+        inputs=[wp_state.qpos, wp_state.qvel, wp_model.nq, wp_model.nv, 
+                wp.from_numpy(mj_model.qpos0.astype(np.float32), device=device), 
+                sampled_qvels_wp], 
+        device=device
+    )
     
     print(f"Simulating {NUM_SAMPLES} trajectories in parallel on {device}...")
-    for _ in range(num_steps):
-        wp_model.step(wp_state, wp_state_next)
-        wp_state, wp_state_next = wp_state_next, wp_state # Double buffer swap
-        wp.launch(compute_running_costs_kernel, dim=NUM_SAMPLES, inputs=[wp_state.qpos, wp_state.qvel, wp_model.nq, wp_model.nv, wp.vec3(*TARGET_POS), costs_wp, float(W_RUNNING_POS), float(W_RUNNING_VEL)], device=device)
     
+    # Parallel simulation loop
+    for _ in range(num_steps):
+        # Advance physics for all samples at once
+        wp_model.step(wp_state, wp_state_next)
+        
+        # Accumulate running costs
+        wp.launch(compute_running_costs_kernel, dim=NUM_SAMPLES, inputs=[wp_state.qpos, wp_state.qvel, wp_model.nq, wp_model.nv, wp.vec3(*TARGET_POS), costs_wp, float(W_RUNNING_POS), float(W_RUNNING_VEL)], device=device)
+        
+        # Double buffer swap
+        wp_state, wp_state_next = wp_state_next, wp_state 
+    
+    # Final terminal cost
     wp.launch(compute_terminal_costs_kernel, dim=NUM_SAMPLES, inputs=[wp_state.qpos, wp_state.qvel, wp_model.nq, wp_model.nv, wp.vec3(*BOX_MIN), wp.vec3(*BOX_MAX), costs_wp, float(W_TERMINAL_POS), float(W_TERMINAL_VEL)], device=device)
 
     # 2. Compute MPPI Weights
     costs_np = costs_wp.numpy()
-    weights = np.exp(-(costs_np - np.min(costs_np)) / TEMP)
+    # Softmax over negative costs for weight distribution
+    weights = np.exp(-(costs_np - np.min(costs_np)) / (TEMP + 1e-6))
     weights /= np.sum(weights)
     optimal_qvel = np.sum(weights[:, None] * sampled_qvels_np, axis=0)
     print(f"Optimal Velocity: {optimal_qvel}")
