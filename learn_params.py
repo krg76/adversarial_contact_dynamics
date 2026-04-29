@@ -17,16 +17,14 @@ XML_PATH = "bouncing_ball.xml"
 
 # MPPI Parameters
 TARGET_POS   = np.array([0.0, 0.0, 0.0])
-NUM_SAMPLES  = 256
-NOISE_SIGMA  = 5.0
+NUM_SAMPLES  = 1000
+NOISE_SIGMA  = 1.0
 
 # Comfree Warp parameters
 CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
-# Optimization Hyperparameters
-FINITE_DIFF_EPS = 1e-4
-MAX_ITERS = 20
+MAX_ITERS = 1000
 
 def main() -> None:
     duration = 2.0
@@ -79,9 +77,15 @@ def main() -> None:
     print("-" * 55)
 
     # 3. Optimization Loop using SciPy
-    res = minimize(objective, initial_params, method='L-BFGS-B',
-                   options={'maxiter': MAX_ITERS, 'eps': FINITE_DIFF_EPS})
+    # res = minimize(objective, initial_params, method='Nelder-Mead',
+    #                options={'maxfev': MAX_ITERS, 
+    #                'xatol':1e-5})
+    res = minimize(objective, initial_params, method='Powell',
+                   options={'maxfev': MAX_ITERS, 
+                   'xtol':1e-5
+                   })
     cf_stiffness, cf_damping = np.exp(res.x)
+    print("Final Parameters:",cf_stiffness, cf_damping)
 
 if __name__ == "__main__":
     main()
