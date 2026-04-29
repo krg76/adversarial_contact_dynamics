@@ -17,7 +17,7 @@ XML_PATH = "bouncing_ball.xml"
 
 # MPPI Parameters
 TARGET_POS   = np.array([0.0, 0.0, 0.0])
-NUM_SAMPLES  = 1000
+NUM_SAMPLES  = 256
 NOISE_SIGMA  = 5.0
 
 # Comfree Warp parameters
@@ -58,7 +58,7 @@ def main() -> None:
         k, d = params
         # Evaluate current parameter set
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
-            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, k, d
+            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, math.exp(k), math.exp(d)
         )
         # Mean Squared Error between trajectories
         loss = np.mean((pred_pos_batch[0] - target_traj)**2)
@@ -79,12 +79,6 @@ def main() -> None:
                    bounds=[(1e-6, None), (1e-6, None)],
                    options={'maxiter': MAX_ITERS, 'eps': FINITE_DIFF_EPS})
     cf_stiffness, cf_damping = res.x
-
-    # 4. Render final learned trajectory for verification ─────────────────────
-    renderer = mujoco.Renderer(mj_model, height=480, width=640)
-    frames = rs.render_trajectory(mj_model, mj_data, renderer, optimal_qvel, duration, fps)
-    media.write_video("learning_results.mp4", frames, fps=fps)
-    print(f"\nOptimization complete. Video saved to learning_results.mp4")
 
 if __name__ == "__main__":
     main()
