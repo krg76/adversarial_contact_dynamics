@@ -20,7 +20,7 @@ OUT_PATH = "bouncing_ball.mp4"
 TARGET_POS   = np.array([0.0, 0.0, 0.0])
 NUM_SAMPLES  = 1000
 NOISE_SIGMA  = 5.0
-TEMP         = 0.5
+TEMP         = 1
 
 # Box constraints for terminal position [x, y, z]
 BOX_MIN = np.array([0.0, 0.0, 0.0])
@@ -33,8 +33,8 @@ W_TERMINAL_POS = 10.0
 W_TERMINAL_VEL = 5.0
 
 # Comfree Warp parameters (if applicable)
-CF_STIFFNESS = 100.0
-CF_DAMPING   = 10.0
+CF_STIFFNESS = 0.2
+CF_DAMPING   = 0.001
 
 
 def simulate_trajectories_parallel(
@@ -105,6 +105,16 @@ def run_MPPI(
     duration: float,
     cf_stiffness: float,
     cf_damping: float,
+    costs_args = {
+        "Box_Center":TARGET_POS,
+        "Box_Min":BOX_MIN,
+        "Box_Max":BOX_MAX,
+        "Temp":TEMP,
+        "Cost_Coeff":[W_RUNNING_POS,
+            W_RUNNING_VEL,
+            W_TERMINAL_POS,
+            W_TERMINAL_VEL,]
+    }
 ) -> np.ndarray:
     """
     Runs the MPPI algorithm to find the optimal initial velocity.
@@ -131,27 +141,27 @@ def run_MPPI(
 
     # 5. Vectorised cost computation (no Python loop)
     # Running position cost: sum of squared distance to target over all steps
-    diff             = all_positions - TARGET_POS          # broadcast over (N, T, 3)
+    diff             = all_positions - costs_args["Box_Center"]          # broadcast over (N, T, 3)
     cost_running_pos = np.sum(diff ** 2,              axis=(1, 2))  # (N,)
     cost_running_vel = np.sum(all_velocities ** 2,    axis=(1, 2))  # (N,)
 
     # Terminal position: penalty for leaving the box
     term_pos   = all_positions[:, -1, :]                           # (N, 3)
-    out_of_box = (np.maximum(0.0, BOX_MIN - term_pos) +
-                  np.maximum(0.0, term_pos - BOX_MAX))
+    out_of_box = (np.maximum(0.0, costs_args["Box_Min"] - term_pos) +
+                  np.maximum(0.0, term_pos - costs_args["Box_Max"]))
     cost_term_pos = np.sum(out_of_box ** 2,           axis=1)      # (N,)
 
     # Terminal velocity: penalty for arriving fast
     cost_term_vel = np.sum(all_velocities[:, -1, :] ** 2, axis=1)  # (N,)
 
-    costs = (W_RUNNING_POS  * cost_running_pos +
-             W_RUNNING_VEL  * cost_running_vel +
-             W_TERMINAL_POS * cost_term_pos    +
-             W_TERMINAL_VEL * cost_term_vel)
+    costs = (costs_args["Cost_Coeff"][0]  * cost_running_pos +
+             costs_args["Cost_Coeff"][1]  * cost_running_vel +
+             costs_args["Cost_Coeff"][2] * cost_term_pos    +
+             costs_args["Cost_Coeff"][3] * cost_term_vel)
 
     # 6. MPPI weights
     min_cost = np.min(costs)
-    weights  = np.exp(-(costs - min_cost) / TEMP)
+    weights  = np.exp(-(costs - min_cost) / costs_args["Temp"])
     weights /= np.sum(weights)
 
     optimal_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
