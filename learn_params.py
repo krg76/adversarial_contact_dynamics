@@ -52,33 +52,36 @@ def main() -> None:
     target_traj = gt_pos_batch[0]
 
     # 2. Setup optimization to learn parameters
-    initial_params = np.array([0.5, 0.1])
+    # We optimize in log-space to ensure parameters stay positive and to 
+    # better handle sensitivity across different scales.
+    initial_params = np.log([0.5, 0.1])
 
     def objective(params):
-        k, d = params
+        log_k, log_d = params
+        k, d = np.exp(log_k), np.exp(log_d)
+
         # Evaluate current parameter set
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
-            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, math.exp(k), math.exp(d)
+            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, k, d
         )
         # Mean Squared Error between trajectories
         loss = np.mean((pred_pos_batch[0] - target_traj)**2)
         
         objective.iter_count += 1
-        print(f"{objective.iter_count:<5} | {loss:<12.8f} | {k:<10.4f} | {d:<10.4f}")
+        print(f"{objective.iter_count:<5} | {loss:<12.8f} | {k:<10.6f} | {d:<10.6f}")
         return loss
     
     objective.iter_count = 0
 
-    print(f"Starting Parameter Identification (Scipy minimize)...")
+    print(f"Starting Parameter Identification (Scipy minimize in log-space)...")
     print(f"GT: stiffness={CF_GT_STIFFNESS}, damping={CF_GT_DAMPING}\n")
     print(f"{'Iter':<5} | {'Loss':<12} | {'Stiffness':<10} | {'Damping':<10}")
     print("-" * 55)
 
     # 3. Optimization Loop using SciPy
-    res = minimize(objective, initial_params, method='L-BFGS-B', 
-                   bounds=[(1e-6, None), (1e-6, None)],
+    res = minimize(objective, initial_params, method='L-BFGS-B',
                    options={'maxiter': MAX_ITERS, 'eps': FINITE_DIFF_EPS})
-    cf_stiffness, cf_damping = res.x
+    cf_stiffness, cf_damping = np.exp(res.x)
 
 if __name__ == "__main__":
     main()
