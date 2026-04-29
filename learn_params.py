@@ -24,13 +24,11 @@ NOISE_SIGMA  = 1.0
 CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
-MPPI_ITERS = 5  # Number of MPPI refinement loops
+MPPI_ITERS = 3  # Number of MPPI refinement loops
 
-def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d):
+def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, noise, duration, k, d):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
     curr_qvel = base_qvel.copy()
-    # Pre-sample the noise offsets once per evaluation
-    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
     for _ in range(MPPI_ITERS):
         sampled = (curr_qvel + noise).astype(np.float32)
         curr_qvel = rs.run_MPPI(mj_model, mj_data, sampled, duration, k, d)
@@ -41,7 +39,6 @@ MAX_ITERS = 1000
 
 def main() -> None:
     duration = 2.0
-    fps = 30
 
     mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
     mj_data  = mujoco.MjData(mj_model)
@@ -51,8 +48,9 @@ def main() -> None:
 
     # 1. Generate target trajectory using Ground Truth parameters
     print(f"Generating target trajectory with {MPPI_ITERS} MPPI loops...")
+    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
     optimal_qvel = get_iterative_mppi_qvel(
-        mj_model, mj_data, base_qvel, duration, 
+        mj_model, mj_data, base_qvel, noise, duration, 
         CF_GT_STIFFNESS, CF_GT_DAMPING
     )
     
@@ -66,6 +64,7 @@ def main() -> None:
     # We optimize in log-space to ensure parameters stay positive and to 
     # better handle sensitivity across different scales.
     initial_params = np.log([0.5, 0.1])
+    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
 
     def objective(params):
         log_k, log_d = params
@@ -73,7 +72,7 @@ def main() -> None:
 
         # NEW: Re-optimize velocity for the current parameters being evaluated
         current_opt_qvel = get_iterative_mppi_qvel(
-            mj_model, mj_data, base_qvel, duration, k, d
+            mj_model, mj_data, base_qvel, noise, duration, k, d
         )
 
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
@@ -97,10 +96,12 @@ def main() -> None:
     # res = minimize(objective, initial_params, method='Nelder-Mead',
     #                options={'maxfev': MAX_ITERS, 
     #                'xatol':1e-5})
-    res = minimize(objective, initial_params, method='Powell',
+    res = minimize(objective, initial_params, method='Powell',                
+                   bounds = [(-5,5),(-5,5)],#[(1e-10,None),(1e-10,None)],
                    options={'maxfev': MAX_ITERS, 
                    'xtol':1e-5
-                   })
+                   }
+                   )
     cf_stiffness, cf_damping = np.exp(res.x)
     print("Final Parameters:",cf_stiffness, cf_damping)
 
