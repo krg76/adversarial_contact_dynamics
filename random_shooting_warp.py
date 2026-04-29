@@ -2,6 +2,7 @@ import os
 os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 
 import mujoco
+import mujoco_warp as mw
 import comfree_warp as cf_mjwarp
 
 import warp as wp
@@ -43,15 +44,22 @@ def simulate_trajectories_parallel(
     duration: float,
     cf_stiffness: float,
     cf_damping: float,
+    use_comfree: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     nworld    = initial_qvels.shape[0]
     num_steps = math.ceil(duration / mj_model.opt.timestep)
 
     # ── Reset: re-upload CPU data to get a clean GPU state ───────────────────
-    model = cf_mjwarp.put_model(mj_model,
-        comfree_stiffness=cf_stiffness,
-        comfree_damping=cf_damping)
-    data  = cf_mjwarp.put_data(mj_model, mj_data, nworld=nworld)  # replaces mj_resetData
+    if use_comfree:
+        engine = cf_mjwarp
+        model = engine.put_model(mj_model,
+            comfree_stiffness=cf_stiffness,
+            comfree_damping=cf_damping)
+    else:
+        engine = mw
+        model = engine.put_model(mj_model)
+
+    data = engine.put_data(mj_model, mj_data, nworld=nworld)  # replaces mj_resetData
 
     # ── Set per-world initial velocities ──────────────────────────────────────
     qvel_np = np.zeros((nworld, mj_model.nv), dtype=np.float32)
@@ -63,7 +71,7 @@ def simulate_trajectories_parallel(
     all_velocities = np.empty((nworld, num_steps, 3), dtype=np.float32)
 
     for step in range(num_steps):
-        cf_mjwarp.step(model, data)
+        engine.step(model, data)
         all_positions[:, step, :]  = data.qpos.numpy()[:, :3]
         all_velocities[:, step, :] = data.qvel.numpy()[:, :3]
 
@@ -77,21 +85,40 @@ def render_trajectory(
     initial_qvel: np.ndarray,
     duration: float,
     fps: int,
+    use_comfree: bool = True,
+    cf_stiffness: float = 0.2,
+    cf_damping: float = 0.001,
 ) -> list[np.ndarray]:
     """
-    Render a single trajectory with the standard CPU MuJoCo renderer.
-    MuJoCo Warp does not expose its own renderer, so we fall back here.
+    Render a single trajectory using a Warp backend (comfree or regular).
     """
     steps_per_frame = max(1, round(1.0 / (fps * mj_model.opt.timestep)))
     num_steps       = math.ceil(duration / mj_model.opt.timestep)
     frames          = []
 
+    # ── Setup engine and upload model ─────────────────────────────────────────
+    if use_comfree:
+        engine = cf_mjwarp
+        model_warp = engine.put_model(mj_model,
+            comfree_stiffness=cf_stiffness,
+            comfree_damping=cf_damping)
+    else:
+        engine = mw
+        model_warp = engine.put_model(mj_model)
+
     mujoco.mj_resetData(mj_model, mj_data)
-    mj_data.qvel[:3] = initial_qvel
+    data_warp = engine.put_data(mj_model, mj_data, nworld=1)
+
+    # Set initial velocity on GPU
+    qvel_np = np.zeros((1, mj_model.nv), dtype=np.float32)
+    qvel_np[0, :3] = initial_qvel.astype(np.float32)
+    data_warp.qvel.assign(qvel_np)
 
     for step in range(num_steps):
-        mujoco.mj_step(mj_model, mj_data)
+        engine.step(model_warp, data_warp)
         if step % steps_per_frame == 0:
+            # Sync GPU data back to CPU mj_data for rendering
+            engine.get_data(mj_model, mj_data, data_warp)
             renderer.update_scene(mj_data)
             frames.append(renderer.render())
 
@@ -118,7 +145,8 @@ def run_MPPI(
         "Noise_Sigma":NOISE_SIGMA,
         "Num_Samples":NUM_SAMPLES,
         "MPPI_Iters":MPPI_ITERS
-    }
+    },
+    use_comfree: bool = True,
 ) -> np.ndarray:
     """
     Runs the MPPI algorithm to find the optimal initial velocity.
@@ -141,7 +169,7 @@ def run_MPPI(
         sampled_qvels = (nominal_qvel + noise).astype(np.float32)
     
         all_positions, all_velocities = simulate_trajectories_parallel(
-            mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping
+            mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping, use_comfree
         )
 
         diff             = all_positions - costs_args["Box_Center"]          # broadcast over (N, T, 3)
@@ -174,6 +202,7 @@ def run_MPPI(
 def main() -> None:
     fps      = 30
     duration = 2.0
+    use_comfree = True
 
     # ── 1. Build CPU model/data (needed for XML parsing & rendering) ──────────
     mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
@@ -185,12 +214,14 @@ def main() -> None:
 
     # 3. Run MPPI to find the optimal velocity ────────────────────────────────
     optimal_qvel = run_MPPI(
-        mj_model, mj_data, base_qvel, duration, CF_STIFFNESS, CF_DAMPING
+        mj_model, mj_data, base_qvel, duration, CF_STIFFNESS, CF_DAMPING, use_comfree=use_comfree
     )
 
     # 4. Render optimal trajectory (CPU renderer) ─────────────────────────────
     renderer = mujoco.Renderer(mj_model, height=480, width=640)
-    frames   = render_trajectory(mj_model, mj_data, renderer, optimal_qvel, duration, fps)
+    frames   = render_trajectory(
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree, CF_STIFFNESS, CF_DAMPING
+    )
 
     media.write_video(OUT_PATH, frames, fps=fps)
     print(f"Video saved → {OUT_PATH}")

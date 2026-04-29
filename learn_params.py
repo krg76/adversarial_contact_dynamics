@@ -2,6 +2,7 @@ import os
 os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 
 import mujoco
+import mujoco_warp as mw
 import comfree_warp as cf_mjwarp
 
 import warp as wp
