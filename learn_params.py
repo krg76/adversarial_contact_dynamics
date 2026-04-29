@@ -25,6 +25,8 @@ CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
 MPPI_ITERS = 3  # Number of MPPI refinement loops
+MAX_ITERS = 1000
+OPTIM_ALGO = "L-BFGS-B"
 
 def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, noise, duration, k, d):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
@@ -33,9 +35,6 @@ def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, noise, duration, k, d)
         sampled = (curr_qvel + noise).astype(np.float32)
         curr_qvel = rs.run_MPPI(mj_model, mj_data, sampled, duration, k, d)
     return curr_qvel
-
-
-MAX_ITERS = 1000
 
 def main() -> None:
     duration = 2.0
@@ -93,15 +92,26 @@ def main() -> None:
     print("-" * 55)
 
     # 3. Optimization Loop using SciPy
-    # res = minimize(objective, initial_params, method='Nelder-Mead',
-    #                options={'maxfev': MAX_ITERS, 
-    #                'xatol':1e-5})
-    res = minimize(objective, initial_params, method='Powell',                
-                   bounds = [(-5,5),(-5,5)],#[(1e-10,None),(1e-10,None)],
-                   options={'maxfev': MAX_ITERS, 
-                   'xtol':1e-5
-                   }
-                   )
+    if OPTIM_ALGO == 'Powell':
+        res = minimize(objective, initial_params, method='Powell',                
+                    bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+                    options={'maxfev': MAX_ITERS, 
+                    'xtol':1e-5
+                    }
+        )
+    elif OPTIM_ALGO == 'Nelder-Mead':
+        res = minimize(objective, initial_params, method='Nelder-Mead',                
+            bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+            options={'maxfev': MAX_ITERS, 
+            'xatol':1e-5}
+        )
+    elif OPTIM_ALGO == 'L-BFGS-B':
+        res = minimize(objective, initial_params, method='L-BFGS-B',                
+            bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+            options={'maxfun': MAX_ITERS,
+            'eps':1e-4,
+            'ftol':1e-5}
+        )
     cf_stiffness, cf_damping = np.exp(res.x)
     print("Final Parameters:",cf_stiffness, cf_damping)
 

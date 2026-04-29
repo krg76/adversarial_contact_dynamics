@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-class TrajectoryDiscriminator(nn.Module):
+class LSTMDiscriminator(nn.Module):
     def __init__(self, input_size=3, hidden_size=64, num_layers=2):
         """
         RNN-based discriminator for binary classification of sequences.
