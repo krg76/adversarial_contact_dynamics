@@ -16,7 +16,7 @@ XML_PATH = "bouncing_ball.xml"
 
 # MPPI Parameters
 TARGET_POS   = np.array([0.0, 0.0, 0.0])
-NUM_SAMPLES  = 1000
+NUM_SAMPLES  = 256
 NOISE_SIGMA  = 5.0
 
 # Comfree Warp parameters
@@ -24,9 +24,9 @@ CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
 # Optimization Hyperparameters
-LEARNING_RATE = 0.5
-FINITE_DIFF_EPS = 1e-4
-MAX_ITERS = 20
+LEARNING_RATE = 1e-4
+FINITE_DIFF_EPS = 1e-5
+MAX_ITERS = 100
 
 def main() -> None:
     duration = 2.0
@@ -52,13 +52,13 @@ def main() -> None:
     target_traj = gt_pos_batch[0]
 
     # 2. Setup Gradient Descent to learn parameters
-    cf_stiffness = 0.5 
-    cf_damping = 0.1
+    log_cf_stiffness = math.log(0.5) 
+    log_cf_damping = math.log(0.1)
 
     def get_loss(k, d):
         # Evaluate current parameter set
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
-            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, k, d
+            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, math.exp(k), math.exp(d)
         )
         # Mean Squared Error between trajectories
         return np.mean((pred_pos_batch[0] - target_traj)**2)
@@ -70,33 +70,27 @@ def main() -> None:
 
     # 3. Optimization Loop
     for i in range(MAX_ITERS):
-        current_loss = get_loss(cf_stiffness, cf_damping)
+        current_loss = get_loss(log_cf_stiffness, log_cf_damping)
         
         # Finite differences for gradients
         # dLoss/dStiffness
-        loss_k = get_loss(cf_stiffness + FINITE_DIFF_EPS, cf_damping)
+        loss_k = get_loss(log_cf_stiffness + FINITE_DIFF_EPS, log_cf_damping)
         grad_k = (loss_k - current_loss) / FINITE_DIFF_EPS
         
         # dLoss/dDamping
-        loss_d = get_loss(cf_stiffness, cf_damping + FINITE_DIFF_EPS)
+        loss_d = get_loss(log_cf_stiffness, log_cf_damping + FINITE_DIFF_EPS)
         grad_d = (loss_d - current_loss) / FINITE_DIFF_EPS
-        
+        print(grad_k,grad_d)
         # Parameter updates
-        cf_stiffness -= LEARNING_RATE * grad_k
-        cf_damping   -= LEARNING_RATE * grad_d
-        
-        # Enforcement of positivity (stiffness/damping cannot be negative)
-        cf_stiffness = max(1e-6, cf_stiffness)
-        cf_damping   = max(1e-6, cf_damping)
+        log_cf_stiffness -= LEARNING_RATE * grad_k
+        log_cf_damping   -= LEARNING_RATE * grad_d
+
+        cf_stiffness = math.exp(log_cf_stiffness)
+        cf_damping = math.exp(log_cf_damping)
+        print(log_cf_stiffness,log_cf_damping)
 
         print(f"{i:<5} | {current_loss:<12.8f} | {cf_stiffness:<10.4f} | {cf_damping:<10.4f}")
         if current_loss < 1e-9: break
-
-    # 4. Render final learned trajectory for verification ─────────────────────
-    renderer = mujoco.Renderer(mj_model, height=480, width=640)
-    frames = rs.render_trajectory(mj_model, mj_data, renderer, optimal_qvel, duration, fps)
-    media.write_video("learning_results.mp4", frames, fps=fps)
-    print(f"\nOptimization complete. Video saved to learning_results.mp4")
 
 if __name__ == "__main__":
     main()
