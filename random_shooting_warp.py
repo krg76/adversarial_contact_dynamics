@@ -36,6 +36,9 @@ W_TERMINAL_VEL = 5.0
 CF_STIFFNESS = 0.2
 CF_DAMPING   = 0.001
 
+# Mocap configuration
+BASKET_MOCAP_POS = np.array([0.0, 0.0, 0.0])
+
 
 def simulate_trajectories_parallel(
     mj_model: mujoco.MjModel,
@@ -210,6 +213,11 @@ def main() -> None:
     # ── 1. Build CPU model/data (needed for XML parsing & rendering) ──────────
     mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
     mj_data  = mujoco.MjData(mj_model)
+
+    # 1.5 Set basket position using the mocap system ──────────────────────────
+    basket_body_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_BODY, "basket_floating")
+    mocap_idx = mj_model.body_mocapid[basket_body_id]
+    mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
 
     # 2. Sample initial velocities ────────────────────────────────────────────
     starting_pos  = mj_data.qpos[:3].copy()
