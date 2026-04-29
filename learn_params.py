@@ -8,6 +8,7 @@ import warp as wp
 import numpy as np
 import mediapy as media
 import math
+from scipy.optimize import minimize
 
 import random_shooting_warp as rs 
 
@@ -24,7 +25,6 @@ CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
 # Optimization Hyperparameters
-LEARNING_RATE = 0.5
 FINITE_DIFF_EPS = 1e-4
 MAX_ITERS = 20
 
@@ -51,46 +51,34 @@ def main() -> None:
     )
     target_traj = gt_pos_batch[0]
 
-    # 2. Setup Gradient Descent to learn parameters
-    cf_stiffness = 0.5 
-    cf_damping = 0.1
+    # 2. Setup optimization to learn parameters
+    initial_params = np.array([0.5, 0.1])
 
-    def get_loss(k, d):
+    def objective(params):
+        k, d = params
         # Evaluate current parameter set
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
             mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, k, d
         )
         # Mean Squared Error between trajectories
-        return np.mean((pred_pos_batch[0] - target_traj)**2)
+        loss = np.mean((pred_pos_batch[0] - target_traj)**2)
+        
+        objective.iter_count += 1
+        print(f"{objective.iter_count:<5} | {loss:<12.8f} | {k:<10.4f} | {d:<10.4f}")
+        return loss
+    
+    objective.iter_count = 0
 
-    print(f"Starting Parameter Identification (Gradient Descent)...")
+    print(f"Starting Parameter Identification (Scipy minimize)...")
     print(f"GT: stiffness={CF_GT_STIFFNESS}, damping={CF_GT_DAMPING}\n")
     print(f"{'Iter':<5} | {'Loss':<12} | {'Stiffness':<10} | {'Damping':<10}")
     print("-" * 55)
 
-    # 3. Optimization Loop
-    for i in range(MAX_ITERS):
-        current_loss = get_loss(cf_stiffness, cf_damping)
-        
-        # Finite differences for gradients
-        # dLoss/dStiffness
-        loss_k = get_loss(cf_stiffness + FINITE_DIFF_EPS, cf_damping)
-        grad_k = (loss_k - current_loss) / FINITE_DIFF_EPS
-        
-        # dLoss/dDamping
-        loss_d = get_loss(cf_stiffness, cf_damping + FINITE_DIFF_EPS)
-        grad_d = (loss_d - current_loss) / FINITE_DIFF_EPS
-        
-        # Parameter updates
-        cf_stiffness -= LEARNING_RATE * grad_k
-        cf_damping   -= LEARNING_RATE * grad_d
-        
-        # Enforcement of positivity (stiffness/damping cannot be negative)
-        cf_stiffness = max(1e-6, cf_stiffness)
-        cf_damping   = max(1e-6, cf_damping)
-
-        print(f"{i:<5} | {current_loss:<12.8f} | {cf_stiffness:<10.4f} | {cf_damping:<10.4f}")
-        if current_loss < 1e-9: break
+    # 3. Optimization Loop using SciPy
+    res = minimize(objective, initial_params, method='L-BFGS-B', 
+                   bounds=[(1e-6, None), (1e-6, None)],
+                   options={'maxiter': MAX_ITERS, 'eps': FINITE_DIFF_EPS})
+    cf_stiffness, cf_damping = res.x
 
     # 4. Render final learned trajectory for verification ─────────────────────
     renderer = mujoco.Renderer(mj_model, height=480, width=640)
