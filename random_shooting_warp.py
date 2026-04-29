@@ -32,6 +32,10 @@ W_RUNNING_VEL  = 0.0
 W_TERMINAL_POS = 10.0
 W_TERMINAL_VEL = 5.0
 
+# Comfree Warp parameters (if applicable)
+CF_STIFFNESS = 100.0
+CF_DAMPING   = 10.0
+
 
 def simulate_trajectories_parallel(
     mj_model: mujoco.MjModel,
@@ -94,36 +98,38 @@ def render_trajectory(
 
     return frames
 
-def run_MPPI(model, data, noise):
-    print()
-
-def main() -> None:
-    fps      = 30
-    duration = 2.0
-
-    # ── 1. Build CPU model/data (needed for XML parsing & rendering) ──────────
-    mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
-    mj_data  = mujoco.MjData(mj_model)
-
-    # ── 2. Upload to GPU as a MuJoCo Warp model + batched data ───────────────
-    #   put_data replicates mj_data's current state across `nworld` worlds.
-    #model = cf_mjwarp.put_model(mj_model)
-    #data  = cf_mjwarp.put_data(mj_model, mj_data, nworld=NUM_SAMPLES)
-
-    # ── 3. Sample initial velocities ─────────────────────────────────────────
-    starting_pos  = mj_data.qpos[:3].copy()
-    base_qvel     = TARGET_POS - starting_pos
-    sampled_qvels = (base_qvel + np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))).astype(np.float32)
-
-    # ── 4. Parallel GPU simulation ────────────────────────────────────────────
-    print(f"Simulating {NUM_SAMPLES} trajectories in parallel with MuJoCo Warp...")
+def run_MPPI(
+    mj_model: mujoco.MjModel,
+    mj_data: mujoco.MjData,
+    sampled_qvels: np.ndarray,
+    duration: float,
+    cf_stiffness: float,
+    cf_damping: float,
+) -> np.ndarray:
+    """
+    Runs the MPPI algorithm to find the optimal initial velocity.
+    
+    Args:
+        mj_model: The MuJoCo model.
+        mj_data: The MuJoCo data.
+        sampled_qvels: An array of sampled initial velocities for each trajectory.
+        duration: The duration of each simulation trajectory.
+        cf_stiffness: Stiffness parameter for comfree_warp.
+        cf_damping: Damping parameter for comfree_warp.
+        
+    Returns:
+        The optimal initial velocity determined by MPPI.
+    """
+    
+    # 4. Parallel GPU simulation
+    #print(f"Simulating {sampled_qvels.shape[0]} trajectories in parallel with MuJoCo Warp...")
     all_positions, all_velocities = simulate_trajectories_parallel(
-        mj_model, mj_data, sampled_qvels, duration   # <-- pass mj_data
+        mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping
     )
     # all_positions  : (NUM_SAMPLES, num_steps, 3)
     # all_velocities : (NUM_SAMPLES, num_steps, 3)
 
-    # ── 5. Vectorised cost computation (no Python loop) ───────────────────────
+    # 5. Vectorised cost computation (no Python loop)
     # Running position cost: sum of squared distance to target over all steps
     diff             = all_positions - TARGET_POS          # broadcast over (N, T, 3)
     cost_running_pos = np.sum(diff ** 2,              axis=(1, 2))  # (N,)
@@ -143,15 +149,34 @@ def main() -> None:
              W_TERMINAL_POS * cost_term_pos    +
              W_TERMINAL_VEL * cost_term_vel)
 
-    # ── 6. MPPI weights ───────────────────────────────────────────────────────
+    # 6. MPPI weights
     min_cost = np.min(costs)
     weights  = np.exp(-(costs - min_cost) / TEMP)
     weights /= np.sum(weights)
 
     optimal_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
-    print(f"Optimal Velocity: {optimal_qvel}")
+    #print(f"Optimal Velocity: {optimal_qvel}")
+    return optimal_qvel
 
-    # ── 7. Render optimal trajectory (CPU renderer) ───────────────────────────
+def main() -> None:
+    fps      = 30
+    duration = 2.0
+
+    # ── 1. Build CPU model/data (needed for XML parsing & rendering) ──────────
+    mj_model = mujoco.MjModel.from_xml_path(XML_PATH)
+    mj_data  = mujoco.MjData(mj_model)
+
+    # 2. Sample initial velocities ────────────────────────────────────────────
+    starting_pos  = mj_data.qpos[:3].copy()
+    base_qvel     = TARGET_POS - starting_pos
+    sampled_qvels = (base_qvel + np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))).astype(np.float32)
+
+    # 3. Run MPPI to find the optimal velocity ────────────────────────────────
+    optimal_qvel = run_MPPI(
+        mj_model, mj_data, sampled_qvels, duration, CF_STIFFNESS, CF_DAMPING
+    )
+
+    # 4. Render optimal trajectory (CPU renderer) ─────────────────────────────
     renderer = mujoco.Renderer(mj_model, height=480, width=640)
     frames   = render_trajectory(mj_model, mj_data, renderer, optimal_qvel, duration, fps)
 
