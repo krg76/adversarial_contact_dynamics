@@ -37,7 +37,7 @@ CF_STIFFNESS = 0.2
 CF_DAMPING   = 0.001
 
 # Mocap configuration
-BASKET_MOCAP_POS = np.array([0.0, 0.0, 0.0])
+BASKET_MOCAP_POS = np.array([2.0, 0.0, 0.0])
 
 
 def simulate_trajectories_parallel(
@@ -106,7 +106,7 @@ def render_trajectory(
         engine = mw
         model_warp = engine.put_model(mj_model)
 
-    mujoco.mj_resetData(mj_model, mj_data)
+    #mujoco.mj_resetData(mj_model, mj_data)
     data_warp = engine.put_data(mj_model, mj_data, nworld=1)
 
     # Set initial velocity on GPU
@@ -230,6 +230,8 @@ def main() -> None:
 
     # 4. Render optimal trajectory (CPU renderer) ─────────────────────────────
     renderer = mujoco.Renderer(mj_model, height=480, width=640)
+    mocap_idx = mj_model.body_mocapid[basket_body_id]
+    mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
     frames   = render_trajectory(
         mj_model, mj_data, renderer, optimal_qvel, duration, fps
     )
