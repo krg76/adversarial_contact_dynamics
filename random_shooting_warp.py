@@ -42,8 +42,8 @@ def simulate_trajectories_parallel(
     mj_data: mujoco.MjData,       # <-- add this
     initial_qvels: np.ndarray,
     duration: float,
-    cf_stiffness: float,
-    cf_damping: float,
+    cf_stiffness: float = CF_STIFFNESS,
+    cf_damping: float = CF_DAMPING,
     use_comfree: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     nworld    = initial_qvels.shape[0]
@@ -89,9 +89,6 @@ def render_trajectory(
     cf_stiffness: float = 0.2,
     cf_damping: float = 0.001,
 ) -> list[np.ndarray]:
-    """
-    Render a single trajectory using a Warp backend (comfree or regular).
-    """
     steps_per_frame = max(1, round(1.0 / (fps * mj_model.opt.timestep)))
     num_steps       = math.ceil(duration / mj_model.opt.timestep)
     frames          = []
@@ -115,10 +112,14 @@ def render_trajectory(
     data_warp.qvel.assign(qvel_np)
 
     for step in range(num_steps):
-        engine.step(model_warp, data_warp)
+        engine.step(model_warp, data_warp)  # FIX 1: was hardcoded to mw.step
+
         if step % steps_per_frame == 0:
-            # Sync GPU data back to CPU mj_data for rendering
-            engine.get_data(mj_model, mj_data, data_warp)
+            # FIX 2: sync GPU state back to CPU mj_data before rendering
+            mj_data.qpos[:] = data_warp.qpos.numpy()[0]
+            mj_data.qvel[:] = data_warp.qvel.numpy()[0]
+            mujoco.mj_forward(mj_model, mj_data)  # recompute derived quantities
+
             renderer.update_scene(mj_data)
             frames.append(renderer.render())
 
@@ -129,8 +130,9 @@ def run_MPPI(
     mj_data: mujoco.MjData,
     nominal_qvel: np.ndarray,
     duration: float,
-    cf_stiffness: float,
-    cf_damping: float,
+    cf_stiffness: float = CF_STIFFNESS,
+    cf_damping: float = CF_DAMPING,
+    use_comfree: bool = False,
     costs_args = {
         "Box_Center":TARGET_POS,
         "Box_Min":BOX_MIN,
@@ -146,7 +148,6 @@ def run_MPPI(
         "Num_Samples":NUM_SAMPLES,
         "MPPI_Iters":MPPI_ITERS
     },
-    use_comfree: bool = True,
 ) -> np.ndarray:
     """
     Runs the MPPI algorithm to find the optimal initial velocity.
@@ -220,8 +221,9 @@ def main() -> None:
     # 4. Render optimal trajectory (CPU renderer) ─────────────────────────────
     renderer = mujoco.Renderer(mj_model, height=480, width=640)
     frames   = render_trajectory(
-        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree, CF_STIFFNESS, CF_DAMPING
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps
     )
+    print(optimal_qvel)
 
     media.write_video(OUT_PATH, frames, fps=fps)
     print(f"Video saved → {OUT_PATH}")
