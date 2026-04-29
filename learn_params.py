@@ -24,6 +24,19 @@ NOISE_SIGMA  = 1.0
 CF_GT_STIFFNESS = 0.2
 CF_GT_DAMPING = 0.001
 
+MPPI_ITERS = 5  # Number of MPPI refinement loops
+
+def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d):
+    """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
+    curr_qvel = base_qvel.copy()
+    # Pre-sample the noise offsets once per evaluation
+    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
+    for _ in range(MPPI_ITERS):
+        sampled = (curr_qvel + noise).astype(np.float32)
+        curr_qvel = rs.run_MPPI(mj_model, mj_data, sampled, duration, k, d)
+    return curr_qvel
+
+
 MAX_ITERS = 1000
 
 def main() -> None:
@@ -35,12 +48,12 @@ def main() -> None:
 
     starting_pos  = mj_data.qpos[:3].copy()
     base_qvel     = TARGET_POS - starting_pos
-    sampled_qvels = (base_qvel + np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))).astype(np.float32)
 
     # 1. Generate target trajectory using Ground Truth parameters
-    # We first find an optimal velocity with GT parameters to ensure contact happens
-    optimal_qvel = rs.run_MPPI(
-        mj_model, mj_data, sampled_qvels, duration, CF_GT_STIFFNESS, CF_GT_DAMPING
+    print(f"Generating target trajectory with {MPPI_ITERS} MPPI loops...")
+    optimal_qvel = get_iterative_mppi_qvel(
+        mj_model, mj_data, base_qvel, duration, 
+        CF_GT_STIFFNESS, CF_GT_DAMPING
     )
     
     # Generate the reference (target) path using the optimal velocity and GT params
@@ -58,9 +71,13 @@ def main() -> None:
         log_k, log_d = params
         k, d = np.exp(log_k), np.exp(log_d)
 
-        # Evaluate current parameter set
+        # NEW: Re-optimize velocity for the current parameters being evaluated
+        current_opt_qvel = get_iterative_mppi_qvel(
+            mj_model, mj_data, base_qvel, duration, k, d
+        )
+
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(
-            mj_model, mj_data, optimal_qvel[np.newaxis, :], duration, k, d
+            mj_model, mj_data, current_opt_qvel[np.newaxis, :], duration, k, d
         )
         # Mean Squared Error between trajectories
         loss = np.mean((pred_pos_batch[0] - target_traj)**2)
