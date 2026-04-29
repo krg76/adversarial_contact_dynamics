@@ -26,7 +26,7 @@ CF_GT_DAMPING = 0.001
 
 MPPI_ITERS = 3  # Number of MPPI refinement loops
 MAX_ITERS = 1000
-OPTIM_ALGO = "L-BFGS-B"
+OPTIM_ALGO = "Powell"#"L-BFGS-B"
 
 def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, noise, duration, k, d):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""

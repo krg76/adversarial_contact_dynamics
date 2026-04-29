@@ -2,8 +2,6 @@ import os
 os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 
 import mujoco
-#import mujoco_warp as mjwarp
-
 import comfree_warp as cf_mjwarp
 
 import warp as wp
@@ -21,6 +19,7 @@ TARGET_POS   = np.array([0.0, 0.0, 0.0])
 NUM_SAMPLES  = 1000
 NOISE_SIGMA  = 5.0
 TEMP         = 1
+MPPI_ITERS = 3  # Number of MPPI refinement loops
 
 # Box constraints for terminal position [x, y, z]
 BOX_MIN = np.array([0.0, 0.0, 0.0])
@@ -101,7 +100,7 @@ def render_trajectory(
 def run_MPPI(
     mj_model: mujoco.MjModel,
     mj_data: mujoco.MjData,
-    sampled_qvels: np.ndarray,
+    nominal_qvel: np.ndarray,
     duration: float,
     cf_stiffness: float,
     cf_damping: float,
@@ -114,6 +113,11 @@ def run_MPPI(
             W_RUNNING_VEL,
             W_TERMINAL_POS,
             W_TERMINAL_VEL,]
+    },
+    sampling_args = {
+        "Noise_Sigma":NOISE_SIGMA,
+        "Num_Samples":NUM_SAMPLES,
+        "MPPI_Iters":MPPI_ITERS
     }
 ) -> np.ndarray:
     """
@@ -130,41 +134,40 @@ def run_MPPI(
     Returns:
         The optimal initial velocity determined by MPPI.
     """
+    rng = np.random.default_rng(seed=42)
+    noise = rng.normal(0, sampling_args["Noise_Sigma"], size=(sampling_args["Num_Samples"], 3)).astype(np.float32) # Consider removing the Y velocity
+
+    for _ in range(sampling_args["MPPI_Iters"]):
+        sampled_qvels = (nominal_qvel + noise).astype(np.float32)
     
-    # 4. Parallel GPU simulation
-    #print(f"Simulating {sampled_qvels.shape[0]} trajectories in parallel with MuJoCo Warp...")
-    all_positions, all_velocities = simulate_trajectories_parallel(
-        mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping
-    )
-    # all_positions  : (NUM_SAMPLES, num_steps, 3)
-    # all_velocities : (NUM_SAMPLES, num_steps, 3)
+        all_positions, all_velocities = simulate_trajectories_parallel(
+            mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping
+        )
 
-    # 5. Vectorised cost computation (no Python loop)
-    # Running position cost: sum of squared distance to target over all steps
-    diff             = all_positions - costs_args["Box_Center"]          # broadcast over (N, T, 3)
-    cost_running_pos = np.sum(diff ** 2,              axis=(1, 2))  # (N,)
-    cost_running_vel = np.sum(all_velocities ** 2,    axis=(1, 2))  # (N,)
+        diff             = all_positions - costs_args["Box_Center"]          # broadcast over (N, T, 3)
+        cost_running_pos = np.sum(diff ** 2,              axis=(1, 2))  # (N,)
+        cost_running_vel = np.sum(all_velocities ** 2,    axis=(1, 2))  # (N,)
 
-    # Terminal position: penalty for leaving the box
-    term_pos   = all_positions[:, -1, :]                           # (N, 3)
-    out_of_box = (np.maximum(0.0, costs_args["Box_Min"] - term_pos) +
-                  np.maximum(0.0, term_pos - costs_args["Box_Max"]))
-    cost_term_pos = np.sum(out_of_box ** 2,           axis=1)      # (N,)
+        # Terminal position: penalty for leaving the box
+        term_pos   = all_positions[:, -1, :]                           # (N, 3)
+        out_of_box = (np.maximum(0.0, costs_args["Box_Min"] - term_pos) +
+                    np.maximum(0.0, term_pos - costs_args["Box_Max"]))
+        cost_term_pos = np.sum(out_of_box ** 2,           axis=1)      # (N,)
 
-    # Terminal velocity: penalty for arriving fast
-    cost_term_vel = np.sum(all_velocities[:, -1, :] ** 2, axis=1)  # (N,)
+        # Terminal velocity: penalty for arriving fast
+        cost_term_vel = np.sum(all_velocities[:, -1, :] ** 2, axis=1)  # (N,)
 
-    costs = (costs_args["Cost_Coeff"][0]  * cost_running_pos +
-             costs_args["Cost_Coeff"][1]  * cost_running_vel +
-             costs_args["Cost_Coeff"][2] * cost_term_pos    +
-             costs_args["Cost_Coeff"][3] * cost_term_vel)
+        costs = (costs_args["Cost_Coeff"][0]  * cost_running_pos +
+                costs_args["Cost_Coeff"][1]  * cost_running_vel +
+                costs_args["Cost_Coeff"][2] * cost_term_pos    +
+                costs_args["Cost_Coeff"][3] * cost_term_vel)
 
-    # 6. MPPI weights
-    min_cost = np.min(costs)
-    weights  = np.exp(-(costs - min_cost) / costs_args["Temp"])
-    weights /= np.sum(weights)
+        # 6. MPPI weights
+        min_cost = np.min(costs)
+        weights  = np.exp(-(costs - min_cost) / costs_args["Temp"])
+        weights /= np.sum(weights)
 
-    optimal_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
+        optimal_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
     #print(f"Optimal Velocity: {optimal_qvel}")
     return optimal_qvel
 
@@ -179,11 +182,10 @@ def main() -> None:
     # 2. Sample initial velocities ────────────────────────────────────────────
     starting_pos  = mj_data.qpos[:3].copy()
     base_qvel     = TARGET_POS - starting_pos
-    sampled_qvels = (base_qvel + np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))).astype(np.float32)
 
     # 3. Run MPPI to find the optimal velocity ────────────────────────────────
     optimal_qvel = run_MPPI(
-        mj_model, mj_data, sampled_qvels, duration, CF_STIFFNESS, CF_DAMPING
+        mj_model, mj_data, base_qvel, duration, CF_STIFFNESS, CF_DAMPING
     )
 
     # 4. Render optimal trajectory (CPU renderer) ─────────────────────────────
