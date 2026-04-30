@@ -65,7 +65,7 @@ def collect_trajectories(config, goals, k, d, use_comfree, fixed_noise):
         
         # Use the fixed noise instead of resampling
         optimal_qvel = lp.get_iterative_mppi_qvel(
-            mj_model, mj_data, base_qvel, config["duration"], k, d, fixed_noise=fixed_noise
+            mj_model, mj_data, base_qvel, config["duration"], k, d, goal, fixed_noise=fixed_noise
         )
         
         # Simulate final trajectory using the optimal velocity
@@ -131,7 +131,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         for goal in goals:
             base_qvel = goal - starting_pos
             opt_qvel = lp.get_iterative_mppi_qvel(
-                mj_model, mj_data, base_qvel, config["duration"], k, d, fixed_noise=fixed_noise
+                mj_model, mj_data, base_qvel, config["duration"], k, d, goal, fixed_noise=fixed_noise
             )
             pos_batch, _ = rs.simulate_trajectories_parallel(
                 mj_model, mj_data, opt_qvel[np.newaxis, :], 

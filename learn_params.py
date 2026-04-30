@@ -28,15 +28,33 @@ CF_GT_DAMPING = 0.001
 MPPI_ITERS = 3  # Number of MPPI refinement loops
 MAX_ITERS = 1000
 OPTIM_ALGO = "Powell"#"L-BFGS-B"
+W_RUNNING_POS  = 1.0
+W_RUNNING_VEL  = 0.0
+W_TERMINAL_POS = 10.0
+W_TERMINAL_VEL = 5.0
 
-def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, num_samples=NUM_SAMPLES, noise_sigma=NOISE_SIGMA, fixed_noise=None):
+def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, goal, 
+                            temp = 1.0, 
+                            num_samples=NUM_SAMPLES, 
+                            noise_sigma=NOISE_SIGMA, 
+                            fixed_noise=None, 
+                            cost_coeffs = [W_RUNNING_POS, W_RUNNING_VEL,W_TERMINAL_POS,W_TERMINAL_VEL,]):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
     sampling_args = {
         "Noise_Sigma": noise_sigma,
         "Num_Samples": num_samples,
         "MPPI_Iters": MPPI_ITERS
     }
-    return rs.run_MPPI(mj_model, mj_data, base_qvel, duration, k, d, sampling_args=sampling_args, fixed_noise=fixed_noise)
+    b_min = np.array([0.0 - 1.0 + goal[0], 0.0 - 1.0 + goal[1], 0.0])
+    b_max = np.array([0.0 + 1.0 + goal[0], 0.0 + 1.0 + goal[1], 1.0])
+    costs_args = {
+        "Box_Center":goal,
+        "Box_Min":b_min,
+        "Box_Max":b_max,
+        "Temp":temp,
+        "Cost_Coeff":cost_coeffs
+    },
+    return rs.run_MPPI(mj_model, mj_data, base_qvel, duration, k, d, sampling_args=sampling_args, costs_args=costs_args, fixed_noise=fixed_noise)
 
 def main() -> None:
     duration = 2.0
