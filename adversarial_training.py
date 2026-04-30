@@ -23,19 +23,19 @@ def get_default_config():
         "env_xml": "bouncing_ball.xml",
         "duration": 2.0,
         "mppi_noise_sigma": 1.0,
-        "mppi_samples": 1000,
+        "mppi_samples": 256,
         "num_goals": 40,                 # Number of goals to sample per GAN iteration
-        "num_goals_gen_train":10,
+        "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
-        "gan_iterations": 100,           # Outer loops
-        "d_epochs": 200,                 # Discriminator training epochs per loop
-        "d_lr": 0.001,
+        "gan_iterations": 10,           # Outer loops
+        "d_epochs": 150,                 # Discriminator training epochs per loop
+        "d_lr": 0.0001,
         "d_batch_size": 16,
-        "g_optim_algo": "Nelder-Mead",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 50,#50,              # Max function evaluations per G-step
-        "init_k": 0.5,
-        "init_d": 0.1,
+        "g_optim_algo": "L-BFGS-B",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
+        "g_max_iters": 10,#50,              # Max function evaluations per G-step
+        "init_k": 0.4,
+        "init_d": 0.002,
         "gt_k": 0.2,                    # Ground truth for standard Mujoco simulation
         "gt_d": 0.001,
         "use_com_free_for_gt":True,
@@ -188,7 +188,7 @@ def run_gan_optimization(config):
     print(f"Running on {device}")
     
     # Initialize Discriminator
-    D = disc.LSTMDiscriminator(input_size=3, hidden_size=64, num_layers=2).to(device)
+    D = disc.LSTMDiscriminator(input_size=3, hidden_size=16, num_layers=2).to(device)
     optimizer = optim.Adam(D.parameters(), lr=config["d_lr"])
     
     current_k = config["init_k"]
@@ -283,7 +283,7 @@ def save_results(history, D, config):
 
 if __name__ == "__main__":
     # Example Grid Search usage
-    algorithms = ["Nelder-Mead"] # Add "Nelder-Mead", "L-BFGS-B" to test others
+    algorithms = ["L-BFGS-B"] # Add "Nelder-Mead", "L-BFGS-B" to test others
     
     for algo in algorithms:
         print(f"\n{'='*50}\nStarting Optimization with {algo}\n{'='*50}")
