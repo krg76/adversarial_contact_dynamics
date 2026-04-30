@@ -29,13 +29,14 @@ MPPI_ITERS = 3  # Number of MPPI refinement loops
 MAX_ITERS = 1000
 OPTIM_ALGO = "Powell"#"L-BFGS-B"
 
-def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, noise, duration, k, d):
+def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, num_samples=NUM_SAMPLES, noise_sigma=NOISE_SIGMA):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
-    curr_qvel = base_qvel.copy()
-    for _ in range(MPPI_ITERS):
-        sampled = (curr_qvel + noise).astype(np.float32)
-        curr_qvel = rs.run_MPPI(mj_model, mj_data, sampled, duration, k, d)
-    return curr_qvel
+    sampling_args = {
+        "Noise_Sigma": noise_sigma,
+        "Num_Samples": num_samples,
+        "MPPI_Iters": MPPI_ITERS
+    }
+    return rs.run_MPPI(mj_model, mj_data, base_qvel, duration, k, d, sampling_args=sampling_args)
 
 def main() -> None:
     duration = 2.0
@@ -48,9 +49,8 @@ def main() -> None:
 
     # 1. Generate target trajectory using Ground Truth parameters
     print(f"Generating target trajectory with {MPPI_ITERS} MPPI loops...")
-    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
     optimal_qvel = get_iterative_mppi_qvel(
-        mj_model, mj_data, base_qvel, noise, duration, 
+        mj_model, mj_data, base_qvel, duration, 
         CF_GT_STIFFNESS, CF_GT_DAMPING
     )
     
@@ -64,7 +64,6 @@ def main() -> None:
     # We optimize in log-space to ensure parameters stay positive and to 
     # better handle sensitivity across different scales.
     initial_params = np.log([0.5, 0.1])
-    noise = np.random.normal(0, NOISE_SIGMA, size=(NUM_SAMPLES, 3))
 
     def objective(params):
         log_k, log_d = params
@@ -72,7 +71,7 @@ def main() -> None:
 
         # NEW: Re-optimize velocity for the current parameters being evaluated
         current_opt_qvel = get_iterative_mppi_qvel(
-            mj_model, mj_data, base_qvel, noise, duration, k, d
+            mj_model, mj_data, base_qvel, duration, k, d
         )
 
         pred_pos_batch, _ = rs.simulate_trajectories_parallel(

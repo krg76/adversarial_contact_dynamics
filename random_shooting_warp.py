@@ -171,8 +171,10 @@ def run_MPPI(
     noise = np.zeros((sampling_args["Num_Samples"], 3), dtype=np.float32)
     noise[:, [0, 2]] = rng.normal(0, sampling_args["Noise_Sigma"], size=(sampling_args["Num_Samples"], 2)).astype(np.float32)
 
+    current_qvel = nominal_qvel.copy()
+
     for _ in range(sampling_args["MPPI_Iters"]):
-        sampled_qvels = (nominal_qvel + noise).astype(np.float32)
+        sampled_qvels = (current_qvel + noise).astype(np.float32)
     
         all_positions, all_velocities = simulate_trajectories_parallel(
             mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping, use_comfree
@@ -201,9 +203,8 @@ def run_MPPI(
         weights  = np.exp(-(costs - min_cost) / costs_args["Temp"])
         weights /= np.sum(weights)
 
-        optimal_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
-    #print(f"Optimal Velocity: {optimal_qvel}")
-    return optimal_qvel
+        current_qvel = np.sum(weights[:, None] * sampled_qvels, axis=0)
+    return current_qvel
 
 def main() -> None:
     fps      = 30

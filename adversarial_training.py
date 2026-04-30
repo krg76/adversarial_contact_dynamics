@@ -61,11 +61,12 @@ def collect_trajectories(config, goals, k, d, use_comfree):
     
     for goal in goals:
         base_qvel = goal - starting_pos
-        noise = np.random.normal(0, config["mppi_noise_sigma"], size=(config["mppi_samples"], 3))
         
         # Iterative MPPI to find optimal velocity for this goal
         optimal_qvel = lp.get_iterative_mppi_qvel(
-            mj_model, mj_data, base_qvel, noise, config["duration"], k, d
+            mj_model, mj_data, base_qvel, config["duration"], k, d,
+            num_samples=config["mppi_samples"],
+            noise_sigma=config["mppi_noise_sigma"]
         )
         
         # Simulate final trajectory using the optimal velocity
@@ -122,7 +123,6 @@ def optimize_parameters(D, config, goals, current_k, current_d):
     
     # We optimize in log-space to ensure positivity
     initial_params = np.log([current_k, current_d])
-    noise = np.random.normal(0, config["mppi_noise_sigma"], size=(config["mppi_samples"], 3))
 
     def objective(params):
         k, d = np.exp(params)
@@ -132,7 +132,9 @@ def optimize_parameters(D, config, goals, current_k, current_d):
         for goal in goals:
             base_qvel = goal - starting_pos
             opt_qvel = lp.get_iterative_mppi_qvel(
-                mj_model, mj_data, base_qvel, noise, config["duration"], k, d
+                mj_model, mj_data, base_qvel, config["duration"], k, d,
+                num_samples=config["mppi_samples"],
+                noise_sigma=config["mppi_noise_sigma"]
             )
             pos_batch, _ = rs.simulate_trajectories_parallel(
                 mj_model, mj_data, opt_qvel[np.newaxis, :], 
