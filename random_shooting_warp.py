@@ -168,8 +168,8 @@ def run_MPPI(
     """
     rng = np.random.default_rng(seed=42)
     # Generate noise only for X (0) and Z (2) directions, leaving Y (1) at zero.
-    noise = np.zeros((sampling_args["Num_Samples"], 3), dtype=np.float32)
-    noise[:, [0, 2]] = rng.normal(0, sampling_args["Noise_Sigma"], size=(sampling_args["Num_Samples"], 2)).astype(np.float32)
+    noise = np.zeros((int(sampling_args["Num_Samples"]), 3), dtype=np.float32)
+    noise[:, [0, 2]] = rng.normal(0, sampling_args["Noise_Sigma"], size=(int(sampling_args["Num_Samples"]), 2)).astype(np.float32)
 
     current_qvel = nominal_qvel.copy()
 

@@ -24,19 +24,20 @@ def get_default_config():
         "duration": 2.0,
         "mppi_noise_sigma": 1.0,
         "mppi_samples": 1000,
-        "num_goals": 5,                 # Number of goals to sample per GAN iteration
+        "num_goals": 10,                 # Number of goals to sample per GAN iteration
         "goal_dist_mean": [0.0, 0.0, 0.0],
-        "goal_dist_std": [0.5, 0.5, 0.0], # e.g., vary X and Y, keep Z flat
+        "goal_dist_std": [0.5, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
         "gan_iterations": 10,           # Outer loops
-        "d_epochs": 10,                 # Discriminator training epochs per loop
+        "d_epochs": 200,                 # Discriminator training epochs per loop
         "d_lr": 0.001,
         "d_batch_size": 16,
         "g_optim_algo": "Powell",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 50,              # Max function evaluations per G-step
+        "g_max_iters": 10,#50,              # Max function evaluations per G-step
         "init_k": 0.5,
         "init_d": 0.1,
         "gt_k": 0.2,                    # Ground truth for standard Mujoco simulation
         "gt_d": 0.001,
+        "use_com_free_for_gt":True,
         "output_dir": "./gan_results"
     }
 
@@ -51,7 +52,7 @@ def sample_goals(config):
     )
     return goals
 
-def collect_trajectories(config, goals, k, d, use_comfree):
+def collect_trajectories(config, goals, k, d, use_comfree, fixed_noise):
     """2 & 3) Run MPPI on models and record trajectories."""
     mj_model = mujoco.MjModel.from_xml_path(config["env_xml"])
     mj_data = mujoco.MjData(mj_model)
@@ -62,11 +63,9 @@ def collect_trajectories(config, goals, k, d, use_comfree):
     for goal in goals:
         base_qvel = goal - starting_pos
         
-        # Iterative MPPI to find optimal velocity for this goal
+        # Use the fixed noise instead of resampling
         optimal_qvel = lp.get_iterative_mppi_qvel(
-            mj_model, mj_data, base_qvel, config["duration"], k, d,
-            num_samples=config["mppi_samples"],
-            noise_sigma=config["mppi_noise_sigma"]
+            mj_model, mj_data, base_qvel, fixed_noise, config["duration"], k, d
         )
         
         # Simulate final trajectory using the optimal velocity
@@ -112,7 +111,7 @@ def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
 
 # ─── GENERATOR / PARAMETER OPTIMIZATION ───────────────────────────────────────
 
-def optimize_parameters(D, config, goals, current_k, current_d):
+def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
     """5) GAN style optimization using the discriminator to score trajectories."""
     device = next(D.parameters()).device
     mj_model = mujoco.MjModel.from_xml_path(config["env_xml"])
@@ -128,13 +127,11 @@ def optimize_parameters(D, config, goals, current_k, current_d):
         k, d = np.exp(params)
         generated_trajs = []
         
-        # Generate trajectories for all goals with current parameters
+        # Generate trajectories for all goals using the SAME fixed noise
         for goal in goals:
             base_qvel = goal - starting_pos
             opt_qvel = lp.get_iterative_mppi_qvel(
-                mj_model, mj_data, base_qvel, config["duration"], k, d,
-                num_samples=config["mppi_samples"],
-                noise_sigma=config["mppi_noise_sigma"]
+                mj_model, mj_data, base_qvel, fixed_noise, config["duration"], k, d
             )
             pos_batch, _ = rs.simulate_trajectories_parallel(
                 mj_model, mj_data, opt_qvel[np.newaxis, :], 
@@ -145,8 +142,6 @@ def optimize_parameters(D, config, goals, current_k, current_d):
         generated_trajs = torch.tensor(np.array(generated_trajs), dtype=torch.float32).to(device)
         
         with torch.no_grad():
-            # Discriminator output: 1 means real, 0 means fake.
-            # The Generator (our parameters) wants to maximize D's output, so we minimize (1 - D).
             d_scores = D(generated_trajs)
             loss = torch.mean(1.0 - d_scores).item()
             
@@ -178,6 +173,12 @@ def run_gan_optimization(config):
     current_k = config["init_k"]
     current_d = config["init_d"]
     
+    # Initialize fixed noise ONCE for the entire training run
+    #fixed_noise = np.random.normal(0, config["mppi_noise_sigma"], size=(config["mppi_samples"], 3))
+    rng = np.random.default_rng(seed=42)
+    fixed_noise = np.zeros((int(config["mppi_samples"]), 3), dtype=np.float32)
+    fixed_noise[:, [0, 2]] = rng.normal(0, config["mppi_noise_sigma"], size=(int(config["mppi_samples"]), 2)).astype(np.float32)
+    
     history = []
     
     for iteration in range(config["gan_iterations"]):
@@ -187,22 +188,22 @@ def run_gan_optimization(config):
         goals = sample_goals(config)
         print(f"Sampled {len(goals)} new goals.")
         
-        # 2. Collect Real and Fake Data
+        # 2. Collect Real and Fake Data (Pass fixed_noise)
         print("Collecting Ground Truth (Standard MuJoCo) trajectories...")
-        real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=False)
+        real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=False, fixed_noise=fixed_noise)
         
         print("Collecting Generated (ComFree_Warp) trajectories...")
-        fake_trajs = collect_trajectories(config, goals, current_k, current_d, use_comfree=True)
+        fake_trajs = collect_trajectories(config, goals, current_k, current_d, use_comfree=True, fixed_noise=fixed_noise)
         
         # 3. Train Discriminator
         print(f"Training Discriminator for {config['d_epochs']} epochs...")
         d_loss = train_discriminator(D, optimizer, real_trajs, fake_trajs, config)
         print(f"Discriminator Loss: {d_loss:.4f}")
         
-        # 4. Train Generator (Optimize Parameters)
+        # 4. Train Generator (Pass fixed_noise)
         print("Optimizing ComFree parameters to fool the Discriminator...")
-        new_goals = sample_goals(config) # Sample new goals for G-step to prevent overfitting
-        best_k, best_d, g_loss = optimize_parameters(D, config, new_goals, current_k, current_d)
+        new_goals = sample_goals(config) 
+        best_k, best_d, g_loss = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
         print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.5f}, D: {best_d:.5f}")
         
         current_k, current_d = best_k, best_d
@@ -269,7 +270,7 @@ if __name__ == "__main__":
         config["output_dir"] = f"./gan_results_{algo.lower()}"
         
         # For a faster dry-run, you might lower these:
-        config["gan_iterations"] = 5
-        config["mppi_samples"] = 100 
+        #config["gan_iterations"] = 5
+        #config["mppi_samples"] = 100 
         
         run_gan_optimization(config)
