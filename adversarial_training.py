@@ -113,6 +113,91 @@ def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
 # ─── GENERATOR / PARAMETER OPTIMIZATION ───────────────────────────────────────
 
 def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
+    """5) GAN-style optimization using finite-difference gradients with Adam."""
+    device = next(D.parameters()).device
+    mj_model = mujoco.MjModel.from_xml_path(config["env_xml"])
+    mj_data  = mujoco.MjData(mj_model)
+    starting_pos = mj_data.qpos[:3].copy()
+
+    D.eval()
+
+    # ── Optimise in log-space so k, d stay positive ───────────────────────────
+    log_params = torch.tensor(
+        np.log([current_k, current_d]),
+        dtype=torch.float64,
+        requires_grad=False,   # we set .grad manually from finite differences
+    )
+    log_params.grad = torch.zeros_like(log_params)
+
+    adam = torch.optim.Adam([log_params], lr=1e-2)
+
+    # Finite-difference step size
+    fd_eps = 1e-3
+
+    # ── Scalar loss function (CPU-side, returns a Python float) ───────────────
+    def objective(log_p: np.ndarray) -> float:
+        k, d = np.exp(log_p)
+        generated_trajs = []
+
+        for goal in goals:
+            base_qvel = goal - starting_pos
+            opt_qvel  = lp.get_iterative_mppi_qvel(
+                mj_model, mj_data, base_qvel, config["duration"],
+                k, d, goal, fixed_noise=fixed_noise,
+            )
+            pos_batch, _ = rs.simulate_trajectories_parallel(
+                mj_model, mj_data, opt_qvel[np.newaxis, :],
+                config["duration"], k, d, use_comfree=True,
+            )
+            generated_trajs.append(pos_batch[0])
+
+        traj_tensor = torch.tensor(
+            np.array(generated_trajs), dtype=torch.float32
+        ).to(device)
+
+        with torch.no_grad():
+            d_scores, d_logits = D(traj_tensor, return_logits=True)
+            loss = (
+                torch.mean(1.0 - d_scores)
+                + 1e-1 * torch.mean(1.0 / torch.cosh(d_logits))
+            ).item()
+
+        return loss
+
+    # ── Main optimisation loop ────────────────────────────────────────────────
+    best_loss   = float("inf")
+    best_log_p  = log_params.detach().numpy().copy()
+
+    for step in range(config["g_max_iters"]):
+        log_p_np = log_params.detach().numpy()
+        f0       = objective(log_p_np)
+
+        # Central finite differences for each parameter
+        grad_np = np.zeros_like(log_p_np)
+        for i in range(len(log_p_np)):
+            p_plus  = log_p_np.copy(); p_plus[i]  += fd_eps
+            p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
+            grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
+
+        # Inject gradients and take an Adam step
+        log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
+        adam.step()
+
+        # Clamp log-params to keep k, d in a sensible range
+        with torch.no_grad():
+            log_params.clamp_(-10.0, 10.0)
+
+        k, d = np.exp(log_p_np)
+        print(f"  Step {step+1:>3d} | loss={f0:.6f} | k={k:.5f}, d={d:.5f}")
+
+        if f0 < best_loss:
+            best_loss  = f0
+            best_log_p = log_p_np.copy()
+
+    best_k, best_d = np.exp(best_log_p)
+    return best_k, best_d, best_loss
+
+def optimize_parameters_(D, config, goals, current_k, current_d, fixed_noise):
     """5) GAN style optimization using the discriminator to score trajectories."""
     device = next(D.parameters()).device
     mj_model = mujoco.MjModel.from_xml_path(config["env_xml"])
