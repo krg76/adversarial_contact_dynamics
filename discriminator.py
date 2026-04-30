@@ -36,7 +36,7 @@ class LSTMDiscriminator(nn.Module):
         out = self.fc(out[:, -1, :])
         
         if return_logits:
-            return out
+            return self.sigmoid(out), out
         else:
             return self.sigmoid(out)
 

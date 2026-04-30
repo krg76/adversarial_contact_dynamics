@@ -24,18 +24,18 @@ def get_default_config():
         "duration": 2.0,
         "mppi_noise_sigma": 5.0,
         "mppi_samples": 512,
-        "num_goals": 10,                 # Number of goals to sample per GAN iteration
+        "num_goals": 20,                 # Number of goals to sample per GAN iteration
         "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
         "gan_iterations": 20,           # Outer loops
-        "d_epochs": 150,                 # Discriminator training epochs per loop
+        "d_epochs": 200,                 # Discriminator training epochs per loop
         "d_lr": 0.0001,
         "d_batch_size": 16,
-        "g_optim_algo": "L-BFGS-B",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 10,#50,              # Max function evaluations per G-step
-        "init_k": 0.4,
-        "init_d": 0.001,
+        "g_optim_algo": "Nelder-Mead",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
+        "g_max_iters": 5,#50,              # Max function evaluations per G-step
+        "init_k": 0.1,
+        "init_d": 0.01,
         "gt_k": 0.5,                    # Ground truth for standard Mujoco simulation
         "gt_d": 0.002,
         "use_com_free_for_gt":True,
@@ -143,8 +143,9 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         generated_trajs = torch.tensor(np.array(generated_trajs), dtype=torch.float32).to(device)
         
         with torch.no_grad():
-            d_scores = D(generated_trajs,return_logits = False)
+            d_scores,d_logits = D(generated_trajs,return_logits = True)
             loss = torch.mean(1.0 - d_scores).item()#torch.mean(d_scores).item()#torch.mean(1.0 - d_scores).item()
+            loss = loss + 1e-1*torch.mean(1/torch.cosh(d_logits)).item() #torch.mean(d_logits ** 2).item()
         print("Loss:",loss,"(K,D):",k,d,")")
         return loss
     
@@ -159,19 +160,20 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         res = minimize(objective, initial_params, method='Powell',                
                     bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
                     options={'maxfev': config["g_max_iters"], 
-                    'xtol':1e-5
+                    'xtol':1e-3
                     }
         )
     elif config["g_optim_algo"] == 'Nelder-Mead':
         res = minimize(objective, initial_params, method='Nelder-Mead',                
             bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
             options={'maxfev': config["g_max_iters"], 
+            'maxiter':config["g_max_iters"] ,
             'xatol':1e-5}
         )
     elif config["g_optim_algo"] == 'L-BFGS-B':
         res = minimize(objective, initial_params, method='L-BFGS-B',                
             bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
-            options={'maxfun': config["g_max_iters"],
+            options={'maxiter': config["g_max_iters"],
             'eps':1e-4,
             'ftol':1e-5}
         )
