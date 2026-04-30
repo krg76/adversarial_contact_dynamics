@@ -28,13 +28,13 @@ def get_default_config():
         "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
-        "gan_iterations": 50,           # Outer loops
-        "d_epochs": 200,                 # Discriminator training epochs per loop
+        "gan_iterations": 10,           # Outer loops
+        "d_epochs": 20,                 # Discriminator training epochs per loop
         "d_lr": 0.00001,
         "d_batch_size": 16,
         "g_optim_algo": "GD",# DEPRECATED Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
         "g_max_iters": 2,#
-        "g_lr": 1.0,
+        "g_lr": 0.1,
         "g_eps":0.0001,
         "init_k": 0.1,
         "init_d": 0.01,
@@ -180,7 +180,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         for i in range(len(log_p_np)):
             p_plus  = log_p_np.copy(); p_plus[i]  += fd_eps
             p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
-            grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
+            #grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
+            grad_np[i] = (objective(p_plus) - f0) / (2.0 * fd_eps)
 
         # Inject gradients and take an Adam step
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
