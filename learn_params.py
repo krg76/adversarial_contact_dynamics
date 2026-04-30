@@ -29,14 +29,14 @@ MPPI_ITERS = 3  # Number of MPPI refinement loops
 MAX_ITERS = 1000
 OPTIM_ALGO = "Powell"#"L-BFGS-B"
 
-def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, num_samples=NUM_SAMPLES, noise_sigma=NOISE_SIGMA):
+def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, num_samples=NUM_SAMPLES, noise_sigma=NOISE_SIGMA, fixed_noise=None):
     """Runs multiple loops of MPPI to refine the initial velocity for specific parameters."""
     sampling_args = {
         "Noise_Sigma": noise_sigma,
         "Num_Samples": num_samples,
         "MPPI_Iters": MPPI_ITERS
     }
-    return rs.run_MPPI(mj_model, mj_data, base_qvel, duration, k, d, sampling_args=sampling_args)
+    return rs.run_MPPI(mj_model, mj_data, base_qvel, duration, k, d, sampling_args=sampling_args, fixed_noise=fixed_noise)
 
 def main() -> None:
     duration = 2.0

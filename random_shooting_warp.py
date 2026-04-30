@@ -151,6 +151,7 @@ def run_MPPI(
         "Num_Samples":NUM_SAMPLES,
         "MPPI_Iters":MPPI_ITERS
     },
+    fixed_noise: np.ndarray = None,
 ) -> np.ndarray:
     """
     Runs the MPPI algorithm to find the optimal initial velocity.
@@ -166,10 +167,13 @@ def run_MPPI(
     Returns:
         The optimal initial velocity determined by MPPI.
     """
-    rng = np.random.default_rng(seed=42)
-    # Generate noise only for X (0) and Z (2) directions, leaving Y (1) at zero.
-    noise = np.zeros((int(sampling_args["Num_Samples"]), 3), dtype=np.float32)
-    noise[:, [0, 2]] = rng.normal(0, sampling_args["Noise_Sigma"], size=(int(sampling_args["Num_Samples"]), 2)).astype(np.float32)
+    if fixed_noise is not None:
+        noise = fixed_noise
+    else:
+        rng = np.random.default_rng(seed=42)
+        # Generate noise only for X (0) and Z (2) directions, leaving Y (1) at zero.
+        noise = np.zeros((int(sampling_args["Num_Samples"]), 3), dtype=np.float32)
+        noise[:, [0, 2]] = rng.normal(0, sampling_args["Noise_Sigma"], size=(int(sampling_args["Num_Samples"]), 2)).astype(np.float32)
 
     current_qvel = nominal_qvel.copy()
 
