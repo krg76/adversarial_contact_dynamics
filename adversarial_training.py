@@ -36,6 +36,7 @@ def get_default_config():
         "g_lr": 0.25,
         "g_eps": 0.0001,
         "g_reg": 1e-1,
+        "g_l2_weight": 1.0,
         "init_k": 0.1,
         "init_d": 0.01,
         "gt_k": 0.5,
@@ -135,6 +136,10 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
     mj_data = mujoco.MjData(mj_model)
     starting_pos = mj_data.qpos[:3].copy()
 
+    # Pre-calculate Ground Truth trajectories for the new goals
+    gt_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"],
+                                    use_comfree=config["use_com_free_for_gt"], fixed_noise=fixed_noise)
+
     D.eval()
 
     log_params = torch.tensor(
@@ -161,14 +166,17 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
             )
             generated_trajs.append(pos_batch[0])
 
-        traj_tensor = torch.tensor(np.array(generated_trajs), dtype=torch.float32).to(device)
+        traj_array = np.array(generated_trajs)
+        l2_penalty = np.mean((traj_array - gt_trajs)**2)
+
+        traj_tensor = torch.tensor(traj_array, dtype=torch.float32).to(device)
         with torch.no_grad():
             d_scores, d_logits = D(traj_tensor, return_logits=True)
-            loss = (
-                torch.mean(1.0 - d_scores)
-                + config["g_reg"] * torch.mean(1.0 / torch.cosh(d_logits))
-            ).item()
-        return loss
+            gan_loss = torch.mean(1.0 - d_scores).item()
+            reg_loss = (config["g_reg"] * torch.mean(1.0 / torch.cosh(d_logits))).item()
+            
+        total_loss = gan_loss + reg_loss + config.get("g_l2_weight", 1.0) * l2_penalty
+        return total_loss
 
     best_loss = float("inf")
     best_log_p = log_params.detach().numpy().copy()
@@ -197,7 +205,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
             best_log_p = log_p_np.copy()
 
     best_k, best_d = np.exp(best_log_p)
-    return best_k, best_d, best_loss
+    return best_k, best_d, best_loss, gt_trajs
 
 # ─── MAIN GAN LOOP ────────────────────────────────────────────────────────────
 
@@ -237,8 +245,12 @@ def run_gan_optimization(config):
 
         print("Optimizing ComFree parameters to fool the Discriminator...")
         new_goals = sample_goals(config)[:config["num_goals_gen_train"]]
-        best_k, best_d, g_loss = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
+        best_k, best_d, g_loss, new_gt_trajs = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
         print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.5f}, D: {best_d:.5f}")
+
+        # Update goals and real trajectories buffer
+        goals = np.vstack([goals, new_goals])
+        real_trajs = np.vstack([real_trajs, new_gt_trajs])
 
         current_k, current_d = best_k, best_d
         history.append({
