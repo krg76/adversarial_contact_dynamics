@@ -68,13 +68,23 @@ def _compute_qfrc_constraint(
   for i in range(nv):
     efc_vel += J[worldid, efcid, i] * qvel_smooth_pred[worldid, i]
 
-  # key steps in the comfree paper
-  stiffness = comfree_stiffness[worldid % comfree_stiffness.shape[0]] / timestep
-  damping = comfree_damping[worldid % comfree_damping.shape[0]] / timestep
+  # 3rd order non-linear parameters: 3 coefficients per system
+  num_param_sets = comfree_stiffness.shape[0] // 3
+  base_idx = (worldid % num_param_sets) * 3
+
+  k1, k2, k3 = comfree_stiffness[base_idx], comfree_stiffness[base_idx + 1], comfree_stiffness[base_idx + 2]
+  d1, d2, d3 = comfree_damping[base_idx], comfree_damping[base_idx + 1], comfree_damping[base_idx + 2]
+
   # predictive penetration with smoothing velocity
   efc_penetration = efc_vel * timestep + efc_dist[worldid, efcid]
-  # efc_acc = -damping * efc_b[worldid, efcid] * efc_vel - stiffness * efc_k[worldid, efcid] * efc_penetration
-  efc_acc = -damping *  efc_vel - stiffness *  efc_penetration
+
+  # 3rd order non-linear stiffness and damping calculation
+  # acc = -( (k1*p + k2*p^2 + k3*p^3)/dt + (d1*v + d2*v^2 + d3*v^3)/dt )
+  acc_k = (k1 * efc_penetration + k2 * efc_penetration * efc_penetration + k3 * efc_penetration * efc_penetration * efc_penetration) / timestep
+  acc_d = (d1 * efc_vel + d2 * efc_vel * efc_vel + d3 * efc_vel * efc_vel * efc_vel) / timestep
+  
+  efc_acc = -acc_k - acc_d
+
   efc_frc=  efc_mass[worldid, efcid] * efc_acc
   efc_frc= wp.max(efc_frc, 0.0)
 
