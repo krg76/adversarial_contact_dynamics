@@ -30,7 +30,7 @@ def get_default_config():
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
         "gan_iterations": 50,           # Outer loops
         "d_epochs": 200,                 # Discriminator training epochs per loop
-        "d_lr": 0.0001,
+        "d_lr": 0.00001,
         "d_batch_size": 16,
         "g_optim_algo": "GD",# DEPRECATED Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
         "g_max_iters": 2,#
