@@ -12,7 +12,7 @@ class LSTMDiscriminator(nn.Module):
             hidden_size: Number of features in the RNN hidden state.
             num_layers: Number of recurrent layers.
         """
-        super(TrajectoryDiscriminator, self).__init__()
+        super(LSTMDiscriminator, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         
