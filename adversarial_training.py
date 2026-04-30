@@ -28,12 +28,12 @@ def get_default_config():
         "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
-        "gan_iterations": 10,           # Outer loops
+        "gan_iterations": 20,           # Outer loops
         "d_epochs": 150,                 # Discriminator training epochs per loop
         "d_lr": 0.0001,
         "d_batch_size": 16,
         "g_optim_algo": "L-BFGS-B",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 10,#50,              # Max function evaluations per G-step
+        "g_max_iters": 20,#50,              # Max function evaluations per G-step
         "init_k": 0.4,
         "init_d": 0.002,
         "gt_k": 0.2,                    # Ground truth for standard Mujoco simulation
