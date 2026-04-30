@@ -23,17 +23,19 @@ def get_default_config():
         "env_xml": "bouncing_ball.xml",
         "duration": 2.0,
         "mppi_noise_sigma": 5.0,
-        "mppi_samples": 512,
-        "num_goals": 20,                 # Number of goals to sample per GAN iteration
+        "mppi_samples": 256,
+        "num_goals": 10,                 # Number of goals to sample per GAN iteration
         "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
-        "gan_iterations": 20,           # Outer loops
+        "gan_iterations": 50,           # Outer loops
         "d_epochs": 200,                 # Discriminator training epochs per loop
         "d_lr": 0.0001,
         "d_batch_size": 16,
-        "g_optim_algo": "Nelder-Mead",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 5,#50,              # Max function evaluations per G-step
+        "g_optim_algo": "GD",# DEPRECATED Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
+        "g_max_iters": 2,#
+        "g_lr": 1.0,
+        "g_eps":0.0001,
         "init_k": 0.1,
         "init_d": 0.01,
         "gt_k": 0.5,                    # Ground truth for standard Mujoco simulation
@@ -129,10 +131,10 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
     )
     log_params.grad = torch.zeros_like(log_params)
 
-    adam = torch.optim.Adam([log_params], lr=1e-2)
+    adam = torch.optim.Adam([log_params], lr=config["g_lr"])
 
     # Finite-difference step size
-    fd_eps = 1e-3
+    fd_eps = config["g_eps"]#1e-3
 
     # ── Scalar loss function (CPU-side, returns a Python float) ───────────────
     def objective(log_p: np.ndarray) -> float:
@@ -170,6 +172,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     for step in range(config["g_max_iters"]):
         log_p_np = log_params.detach().numpy()
+        log_k,log_d = log_p_np.tolist()
         f0       = objective(log_p_np)
 
         # Central finite differences for each parameter
@@ -188,7 +191,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
             log_params.clamp_(-10.0, 10.0)
 
         k, d = np.exp(log_p_np)
-        print(f"  Step {step+1:>3d} | loss={f0:.6f} | k={k:.5f}, d={d:.5f}")
+        print(f"  Step {step+1:>3d} | loss={f0:.6f} | k={k:.5f} (log_k = {log_k:.5f}), d={d:.5f} (log_d = {log_d:.5f})")
 
         if f0 < best_loss:
             best_loss  = f0
@@ -288,17 +291,22 @@ def run_gan_optimization(config):
     fixed_noise[:, [0, 2]] = rng.normal(0, config["mppi_noise_sigma"], size=(int(config["mppi_samples"]), 2)).astype(np.float32)
     
     history = []
+
+    goals = sample_goals(config)
+    print(f"Sampled {len(goals)} new goals.")
+
+    print("Collecting Ground Truth (Standard MuJoCo) trajectories...")
+    real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=config["use_com_free_for_gt"], fixed_noise=fixed_noise)
     
     for iteration in range(config["gan_iterations"]):
         print(f"\n=== GAN Iteration {iteration+1}/{config['gan_iterations']} ===")
         
         # 1. Sample goals
-        goals = sample_goals(config)
-        print(f"Sampled {len(goals)} new goals.")
-        
+        #goals = sample_goals(config)
+        #print(f"Sampled {len(goals)} new goals.")
         # 2. Collect Real and Fake Data (Pass fixed_noise)
-        print("Collecting Ground Truth (Standard MuJoCo) trajectories...")
-        real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=config["use_com_free_for_gt"], fixed_noise=fixed_noise)
+        #print("Collecting Ground Truth (Standard MuJoCo) trajectories...")
+        #real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=config["use_com_free_for_gt"], fixed_noise=fixed_noise)
         
         print("Collecting Generated (ComFree_Warp) trajectories...")
         fake_trajs = collect_trajectories(config, goals, current_k, current_d, use_comfree=True, fixed_noise=fixed_noise)
@@ -310,8 +318,8 @@ def run_gan_optimization(config):
         
         # 4. Train Generator (Pass fixed_noise)
         print("Optimizing ComFree parameters to fool the Discriminator...")
-        new_goals = sample_goals(config)
-        new_goals = new_goals[0:config["num_goals_gen_train"]]
+        #new_goals = sample_goals(config)
+        new_goals = goals[0:config["num_goals_gen_train"]]
         best_k, best_d, g_loss = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
         print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.5f}, D: {best_d:.5f}")
         
@@ -370,7 +378,7 @@ def save_results(history, D, config):
 
 if __name__ == "__main__":
     # Example Grid Search usage
-    algorithms = ["L-BFGS-B"] # Add "Nelder-Mead", "L-BFGS-B" to test others
+    algorithms = ["GD"] # Add "Nelder-Mead", "L-BFGS-B" to test others
     
     for algo in algorithms:
         print(f"\n{'='*50}\nStarting Optimization with {algo}\n{'='*50}")
