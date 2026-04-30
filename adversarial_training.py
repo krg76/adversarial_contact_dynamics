@@ -24,21 +24,22 @@ def get_default_config():
         "duration": 2.0,
         "mppi_noise_sigma": 1.0,
         "mppi_samples": 1000,
-        "num_goals": 10,                 # Number of goals to sample per GAN iteration
+        "num_goals": 40,                 # Number of goals to sample per GAN iteration
+        "num_goals_gen_train":10,
         "goal_dist_mean": [0.0, 0.0, 0.0],
-        "goal_dist_std": [0.5, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
-        "gan_iterations": 10,           # Outer loops
+        "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
+        "gan_iterations": 100,           # Outer loops
         "d_epochs": 200,                 # Discriminator training epochs per loop
         "d_lr": 0.001,
         "d_batch_size": 16,
-        "g_optim_algo": "Powell",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 10,#50,              # Max function evaluations per G-step
+        "g_optim_algo": "Nelder-Mead",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
+        "g_max_iters": 50,#50,              # Max function evaluations per G-step
         "init_k": 0.5,
         "init_d": 0.1,
         "gt_k": 0.2,                    # Ground truth for standard Mujoco simulation
         "gt_d": 0.001,
         "use_com_free_for_gt":True,
-        "output_dir": "./gan_results"
+        "output_dir": "./gan_comfree_tests_results"
     }
 
 # ─── TRAJECTORY COLLECTION ────────────────────────────────────────────────────
@@ -142,18 +143,38 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         generated_trajs = torch.tensor(np.array(generated_trajs), dtype=torch.float32).to(device)
         
         with torch.no_grad():
-            d_scores = D(generated_trajs,return_logits = True)
-            loss = torch.mean(d_scores).item()#torch.mean(1.0 - d_scores).item()
+            d_scores = D(generated_trajs,return_logits = False)
+            loss = torch.mean(1.0 - d_scores).item()#torch.mean(d_scores).item()#torch.mean(1.0 - d_scores).item()
         print("Loss:",loss,"(K,D):",k,d,")")
         return loss
-
-    res = minimize(
-        objective, 
-        initial_params, 
-        method=config["g_optim_algo"],                
-        bounds=[(-10, 10), (-10, 10)],
-        options={'maxfev': config["g_max_iters"], 'xatol': 1e-4} if config["g_optim_algo"] == 'Nelder-Mead' else {'maxfev': config["g_max_iters"]}
-    )
+    
+    # res = minimize(
+    #     objective, 
+    #     initial_params, 
+    #     method=config["g_optim_algo"],                
+    #     bounds=[(-10, 10), (-10, 10)],
+    #     options={'maxfev': config["g_max_iters"], 'xatol': 1e-4} if config["g_optim_algo"] == 'Nelder-Mead' else {'maxfev': config["g_max_iters"]}
+    # )
+    if config["g_optim_algo"] == 'Powell':
+        res = minimize(objective, initial_params, method='Powell',                
+                    bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+                    options={'maxfev': config["g_max_iters"], 
+                    'xtol':1e-5
+                    }
+        )
+    elif config["g_optim_algo"] == 'Nelder-Mead':
+        res = minimize(objective, initial_params, method='Nelder-Mead',                
+            bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+            options={'maxfev': config["g_max_iters"], 
+            'xatol':1e-5}
+        )
+    elif config["g_optim_algo"] == 'L-BFGS-B':
+        res = minimize(objective, initial_params, method='L-BFGS-B',                
+            bounds = [(-10,10),(-10,10)],#[(1e-10,None),(1e-10,None)],
+            options={'maxfun': config["g_max_iters"],
+            'eps':1e-4,
+            'ftol':1e-5}
+        )
     
     best_k, best_d = np.exp(res.x)
     return best_k, best_d, res.fun
@@ -202,7 +223,8 @@ def run_gan_optimization(config):
         
         # 4. Train Generator (Pass fixed_noise)
         print("Optimizing ComFree parameters to fool the Discriminator...")
-        new_goals = sample_goals(config) 
+        new_goals = sample_goals(config)
+        new_goals = new_goals[0:config["num_goals_gen_train"]]
         best_k, best_d, g_loss = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
         print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.5f}, D: {best_d:.5f}")
         
@@ -261,7 +283,7 @@ def save_results(history, D, config):
 
 if __name__ == "__main__":
     # Example Grid Search usage
-    algorithms = ["Powell"] # Add "Nelder-Mead", "L-BFGS-B" to test others
+    algorithms = ["Nelder-Mead"] # Add "Nelder-Mead", "L-BFGS-B" to test others
     
     for algo in algorithms:
         print(f"\n{'='*50}\nStarting Optimization with {algo}\n{'='*50}")
