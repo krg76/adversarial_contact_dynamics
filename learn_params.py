@@ -46,8 +46,8 @@ def get_iterative_mppi_qvel(mj_model, mj_data, base_qvel, duration, k, d, goal,
         "MPPI_Iters": MPPI_ITERS
     }
     #print(goal)
-    b_min = np.array([0.0 - 1.0 + goal[0], 0.0 - 1.0 + goal[1], 0.0])
-    b_max = np.array([0.0 + 1.0 + goal[0], 0.0 + 1.0 + goal[1], 1.0])
+    b_min = np.array([0.0 - 1.0, 0.0 - 1.0, 0.0]) + goal
+    b_max = np.array([0.0 + 1.0, 0.0 + 1.0, 1.0]) + goal
     costs_args = {"Box_Center":goal,
         "Box_Min":b_min,
         "Box_Max":b_max,

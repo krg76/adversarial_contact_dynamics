@@ -22,9 +22,9 @@ def get_default_config():
     return {
         "env_xml": "bouncing_ball.xml",
         "duration": 2.0,
-        "mppi_noise_sigma": 1.0,
-        "mppi_samples": 256,
-        "num_goals": 40,                 # Number of goals to sample per GAN iteration
+        "mppi_noise_sigma": 5.0,
+        "mppi_samples": 512,
+        "num_goals": 10,                 # Number of goals to sample per GAN iteration
         "num_goals_gen_train":1,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0], # e.g., vary X and Y, keep Z flat
@@ -33,11 +33,11 @@ def get_default_config():
         "d_lr": 0.0001,
         "d_batch_size": 16,
         "g_optim_algo": "L-BFGS-B",       # Scipy optimizer (Powell, Nelder-Mead, L-BFGS-B)
-        "g_max_iters": 20,#50,              # Max function evaluations per G-step
+        "g_max_iters": 10,#50,              # Max function evaluations per G-step
         "init_k": 0.4,
-        "init_d": 0.002,
-        "gt_k": 0.2,                    # Ground truth for standard Mujoco simulation
-        "gt_d": 0.001,
+        "init_d": 0.001,
+        "gt_k": 0.5,                    # Ground truth for standard Mujoco simulation
+        "gt_d": 0.002,
         "use_com_free_for_gt":True,
         "output_dir": "./gan_comfree_tests_results"
     }

@@ -2,7 +2,7 @@
   <size nconmax="300" njmax="500"/>
   <option timestep="0.01" />
   <option gravity="0 0 -98.1"/>
-  <statistic center="5 0 5" extent="20"/>
+  <statistic center="10 0 5" extent="20"/>
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
     <rgba haze="0.15 0.25 0.35 1"/>
@@ -25,19 +25,25 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" solref="0.01 0.5" />
 
     <body name="basket_floating" pos="0 0 0" mocap="true">
+      <geom name="bottom" type="box" size="1.2 1.2 0.1" pos="0 0 0" material="green"/>
       <geom name="wall1" type="box" size="0.1 1 0.5" pos="1.1 0 0.5" material="green"/>
       <geom name="wall2" type="box" size="0.1 1 0.5" pos="-1.1 0 0.5" material="green"/>
       <geom name="wall3" type="box" size="1.2 0.1 0.5" pos="0 1.1 0.5" material="green"/>
       <geom name="wall4" type="box" size="1.2 0.1 0.5" pos="0 -1.1 0.5" material="green"/>
     </body>
 
-    <body name="blocking_wall" pos="5 0 12.5" mocap="true">
-      <geom name="wall" type="box" size="0.1 2 10" pos="0 0 0" material="green"/>
+    <!-- 
+    <body name="roof" pos="2 0 5">
+      <geom name="roof" type="box" size="2 2 0.1" pos="0 0 0" material="green"/>
+    </body>
+    -->
+    <body name="blocking_wall" pos="10 0 8">
+      <geom name="wall" type="box" size="0.1 2 5" pos="0 0 0" material="green"/>
     </body>
 
-    <body name="ball" pos="10 0 5">
+    <body name="ball" pos="20 0 10">
       <joint type="free"/>
-      <geom name="ball" type="sphere" size="0.4" density="0.5" material="red__" solref="0.01 0.5" />
+      <geom name="ball" type="sphere" size="0.4" density="0.5" material="red__" solref="0.01 0.475" />
     </body>
   </worldbody>
 </mujoco>

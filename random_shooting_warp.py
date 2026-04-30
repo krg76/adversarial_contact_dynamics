@@ -16,28 +16,28 @@ XML_PATH = "bouncing_ball.xml"
 OUT_PATH = "bouncing_ball.mp4"
 
 # MPPI Parameters
-TARGET_POS   = np.array([0.0, 0.0, 0.0])
 NUM_SAMPLES  = 1000
 NOISE_SIGMA  = 5.0
 TEMP         = 1
-MPPI_ITERS = 3  # Number of MPPI refinement loops
+MPPI_ITERS = 2  # Number of MPPI refinement loops
 
 # Box constraints for terminal position [x, y, z]
-BOX_MIN = np.array([0.0, 0.0, 0.0])
-BOX_MAX = np.array([1.0, 1.0, 0.5])
+BASKET_MOCAP_POS = np.array([-1.0, 0.0, 0.0])
+BOX_MIN = np.array([-1.0, -1.0, 0.0]) + BASKET_MOCAP_POS
+BOX_MAX = np.array([1.0, 1.0, 1.0]) + BASKET_MOCAP_POS
+TARGET_POS   = BASKET_MOCAP_POS
 
 # Cost Weights
-W_RUNNING_POS  = 1.0
-W_RUNNING_VEL  = 0.0
-W_TERMINAL_POS = 10.0
-W_TERMINAL_VEL = 5.0
+W_RUNNING_POS  = 0.05
+W_RUNNING_VEL  = 0.01
+W_TERMINAL_POS = 100.0
+W_TERMINAL_VEL = 0.01
 
 # Comfree Warp parameters (if applicable)
-CF_STIFFNESS = 0.2
-CF_DAMPING   = 0.001
+CF_STIFFNESS = 0.5
+CF_DAMPING   = 0.002
 
 # Mocap configuration
-BASKET_MOCAP_POS = np.array([2.0, 0.0, 0.0])
 
 
 def simulate_trajectories_parallel(
@@ -226,6 +226,7 @@ def main() -> None:
 
     # 2. Sample initial velocities ────────────────────────────────────────────
     starting_pos  = mj_data.qpos[:3].copy()
+    #base_qvel     = np.array([-1,0,10])#TARGET_POS - starting_pos
     base_qvel     = TARGET_POS - starting_pos
 
     # 3. Run MPPI to find the optimal velocity ────────────────────────────────
@@ -238,7 +239,7 @@ def main() -> None:
     mocap_idx = mj_model.body_mocapid[basket_body_id]
     mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
     frames   = render_trajectory(
-        mj_model, mj_data, renderer, optimal_qvel, duration, fps
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=use_comfree
     )
     print(optimal_qvel)
 
