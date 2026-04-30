@@ -142,9 +142,9 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         generated_trajs = torch.tensor(np.array(generated_trajs), dtype=torch.float32).to(device)
         
         with torch.no_grad():
-            d_scores = D(generated_trajs)
-            loss = torch.mean(1.0 - d_scores).item()
-            
+            d_scores = D(generated_trajs,return_logits = True)
+            loss = torch.mean(d_scores).item()#torch.mean(1.0 - d_scores).item()
+        print("Loss:",loss,"(K,D):",k,d,")")
         return loss
 
     res = minimize(
@@ -190,7 +190,7 @@ def run_gan_optimization(config):
         
         # 2. Collect Real and Fake Data (Pass fixed_noise)
         print("Collecting Ground Truth (Standard MuJoCo) trajectories...")
-        real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=False, fixed_noise=fixed_noise)
+        real_trajs = collect_trajectories(config, goals, config["gt_k"], config["gt_d"], use_comfree=config["use_com_free_for_gt"], fixed_noise=fixed_noise)
         
         print("Collecting Generated (ComFree_Warp) trajectories...")
         fake_trajs = collect_trajectories(config, goals, current_k, current_d, use_comfree=True, fixed_noise=fixed_noise)
