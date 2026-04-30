@@ -183,7 +183,7 @@ def run_MPPI(
         all_positions, all_velocities = simulate_trajectories_parallel(
             mj_model, mj_data, sampled_qvels, duration, cf_stiffness, cf_damping, use_comfree
         )
-
+        #print(costs_args)
         diff             = all_positions - costs_args["Box_Center"]          # broadcast over (N, T, 3)
         cost_running_pos = np.sum(diff ** 2,              axis=(1, 2))  # (N,)
         cost_running_vel = np.sum(all_velocities ** 2,    axis=(1, 2))  # (N,)
