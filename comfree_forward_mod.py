@@ -46,7 +46,7 @@ def _compute_qfrc_constraint(
   # 3rd order non-linear stiffness and damping calculation
   # acc = -( (k1*p + k2*p^2 + k3*p^3)/dt + (d1*v + d2*v^2 + d3*v^3)/dt )
   acc_k = (k1 * efc_penetration + k2 * efc_penetration * efc_penetration + k3 * efc_penetration * efc_penetration * efc_penetration) / timestep
-  acc_d = (d1 * efc_vel + d2 * efc_vel * efc_vel + d3 * efc_vel * efc_vel * efc_vel) / timestep
+  acc_d = (d1 * efc_vel + d2 * wp.abs(efc_vel) * efc_vel + d3 * efc_vel * efc_vel * efc_vel) / timestep
   
   efc_acc = -acc_k - acc_d
 

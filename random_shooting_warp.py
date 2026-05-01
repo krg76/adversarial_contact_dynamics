@@ -4,9 +4,11 @@ os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 import mujoco
 import mujoco_warp as mw
 import comfree_warp as cf_mjwarp
+# Explicitly import the hidden submodule
+import comfree_warp.comfree_core._src.forward as cf_mj_src
+
 import comfree_forward_mod as cf_mod
-
-
+cf_mj_src._compute_qfrc_constraint = cf_mod._compute_qfrc_constraint
 
 import warp as wp
 import numpy as np
@@ -37,8 +39,8 @@ W_TERMINAL_POS = 100.0
 W_TERMINAL_VEL = 0.01
 
 # Comfree Warp parameters (if applicable)
-CF_STIFFNESS = 0.5
-CF_DAMPING   = 0.002
+CF_STIFFNESS = [0.5, 0.005, 0.00005]
+CF_DAMPING   = [0.001, 0.00001, 0.00000001]
 
 # Mocap configuration
 
@@ -242,7 +244,7 @@ def main() -> None:
     mocap_idx = mj_model.body_mocapid[basket_body_id]
     mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
     frames   = render_trajectory(
-        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=False
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=True
     )
     print(optimal_qvel)
 
