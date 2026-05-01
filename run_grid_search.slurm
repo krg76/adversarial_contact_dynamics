@@ -9,7 +9,7 @@
 #SBATCH --partition=gpu
 #SBATCH --time=04:00:00
 
-cd /home/kg878/scratch_pi_amd78/kg878/gan_training
+cd /home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics
 module load miniconda
 conda activate MJW
 
@@ -36,13 +36,13 @@ SEL_LR_D=${LRS_D[$LR_IDX]}
 SEL_LR_G=${LRS_G[$L2_IDX]}
 
 # 4. Create a unique output directory for this specific run
-OUT_DIR="./results/run_${SEL_MODEL}_lr_d${SEL_LR_D}_lr_g${SEL_LR_G}"
+OUT_DIR="/home/kg878/scratch_pi_amd78/kg878/gan_training/results/run_${SEL_MODEL}_lr_d${SEL_LR_D}_lr_g${SEL_LR_G}"
 mkdir -p $OUT_DIR
 
 echo "Starting Task $SLURM_ARRAY_TASK_ID: Model=$SEL_MODEL, LR_D=$SEL_LR_D, LR_G=$SEL_LR_G"
-
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 # 5. Execute the training script
-python adversarial_training.py \
+python /home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics/adversarial_training.py \
     --disc_type "$SEL_MODEL" \
     --d_lr "$SEL_LR_D" \
     --g_lr "$SEL_LR_G" \
