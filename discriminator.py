@@ -1,41 +1,62 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
 
 class LSTMDiscriminator(nn.Module):
     def __init__(self, input_size=3, hidden_size=64, num_layers=2):
-        """
-        RNN-based discriminator for binary classification of sequences.
-        Args:
-            input_size: Number of features per timestep (e.g., 3 for x,y,z).
-            hidden_size: Number of features in the RNN hidden state.
-            num_layers: Number of recurrent layers.
-        """
         super(LSTMDiscriminator, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        
-        # Using LSTM for better gradient flow over long trajectories
         self.rnn = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        
-        # Final classification layers
         self.fc = nn.Linear(hidden_size, 1)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        # Initialize hidden and cell states
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        # x shape: (batch, seq_len, features)
+        out, _ = self.rnn(x)
+        # Return logits from the last time step
+        return self.fc(out[:, -1, :])
+
+class CNN1DDiscriminator(nn.Module):
+    def __init__(self, input_size=3, hidden_size=64, kernel_size=3):
+        """
+        Processes trajectory data using 1D convolutions.
+        Input size corresponds to the number of features (e.g., 3 for x, y, z).
+        """
+        super(CNN1DDiscriminator, self).__init__()
         
-        # Forward propagate LSTM
-        # out: tensor of shape (batch_size, seq_length, hidden_size)
-        out, _ = self.rnn(x, (h0, c0))
+        # We slide over the 'sequence_length' dimension.
+        # The kernel 'sees' all 3 channels at once.
+        self.conv_block = nn.Sequential(
+            nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=kernel_size, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv1d(in_channels=hidden_size, out_channels=hidden_size, kernel_size=kernel_size, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.AdaptiveAvgPool1d(1) # Collapses the sequence length to 1 for classification
+        )
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        # x starts as (Batch, Seq_Len, Features) based on your trajectory collection
+        # We permute to (Batch, Features, Seq_Len) for the Conv1d layers
+        x = x.permute(0, 2, 1) 
         
-        # Decode the hidden state of the last time step
-        out = self.fc(out[:, -1, :])
-        
-        return out
+        out = self.conv_block(x)
+        out = out.view(out.size(0), -1) # Flatten the hidden_size dimension
+        return self.fc(out)
+
+class MLPDiscriminator(nn.Module):
+    def __init__(self, input_size=3, seq_length=100, hidden_size=128):
+        super(MLPDiscriminator, self).__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_size * seq_length, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, 1)
+        )
+
+    def forward(self, x):
+        return self.net(x)
 
 def run_experiment():
     # 1. Hyperparameters

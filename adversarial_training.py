@@ -1,6 +1,5 @@
 import os
-os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
-
+import argparse
 import copy
 import torch
 import torch.nn as nn
@@ -17,6 +16,18 @@ import learn_params as lp
 import mujoco
 
 # ─── CONFIGURATION & GRID SEARCH SETUP ────────────────────────────────────────
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--d_lr", type=float, default=0.00025)
+    parser.add_argument("--g_lr", type=float, default=0.05)
+    parser.add_argument("--g_l2_weight", type=float, default=1e-5)
+    parser.add_argument("--g_reg", type=float, default=0.1)
+    parser.add_argument("--disc_type", type=str, choices=["lstm", "cnn", "mlp"], default="lstm")
+    parser.add_argument("--output_dir", type=str, default="./gan_results")
+    parser.add_argument("--gan_iterations", type=int, default=20)
+    # Add any other config keys you wish to tune here
+    return parser.parse_args()
 
 def get_default_config():
     return {
@@ -223,12 +234,33 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
 # ─── MAIN GAN LOOP ────────────────────────────────────────────────────────────
 
-def run_gan_optimization(config):
+def run_gan_optimization(cmd_args):
+    config = get_default_config()
+    # Merge command line args into config
+    for arg in vars(cmd_args):
+        config[arg] = getattr(cmd_args, arg)
+    
+    os.makedirs(config["output_dir"], exist_ok=True)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Model Selection
+    if config["disc_type"] == "lstm":
+        D = disc.LSTMDiscriminator(input_size=3, hidden_size=16).to(device)
+    elif config["disc_type"] == "cnn":
+        D = disc.CNN1DDiscriminator(input_size=3, hidden_size=16).to(device)
+    elif config["disc_type"] == "mlp":
+        # We need a sample trajectory to find the sequence length for the MLP flatten layer
+        sample_goals_dummy = sample_goals(config)[:1]
+        sample_traj = collect_trajectories(config, sample_goals_dummy, config["init_k"], config["init_d"], True, None)
+        seq_len = sample_traj.shape[1]
+        D = disc.MLPDiscriminator(input_size=3, seq_length=seq_len).to(device)
+
+    #optimizer = optim.Adam(D.parameters(), lr=config["d_lr"])
     os.makedirs(config["output_dir"], exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running on {device}")
 
-    D = disc.LSTMDiscriminator(input_size=3, hidden_size=16, num_layers=2).to(device)
+    #D = disc.LSTMDiscriminator(input_size=3, hidden_size=16, num_layers=2).to(device)
     optimizer = optim.Adam(D.parameters(), lr=config["d_lr"])
 
     current_k = config["init_k"]
