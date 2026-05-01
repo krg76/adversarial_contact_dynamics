@@ -199,7 +199,9 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         for i in range(len(log_p_np)):
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
             grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
-            
+            # p_plus = log_p_np.copy(); p_plus[i] += fd_eps
+            # p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
+            # grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
         adam.step()
