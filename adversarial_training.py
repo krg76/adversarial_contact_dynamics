@@ -1,4 +1,5 @@
 import os
+import argparse
 import copy
 import torch
 import torch.nn as nn
@@ -15,6 +16,19 @@ import learn_params as lp
 import mujoco
 
 # ─── CONFIGURATION & GRID SEARCH SETUP ────────────────────────────────────────
+#python adversarial_training.py --disc_type "cnn"
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--d_lr", type=float, default=0.00025)
+    parser.add_argument("--g_lr", type=float, default=0.05)
+    parser.add_argument("--g_l2_weight", type=float, default=1e-5)
+    parser.add_argument("--g_reg", type=float, default=0.1)
+    parser.add_argument("--disc_type", type=str, choices=["lstm", "cnn", "mlp"], default="lstm")
+    parser.add_argument("--output_dir", type=str, default="./gan_results")
+    parser.add_argument("--gan_iterations", type=int, default=20)
+    # Add any other config keys you wish to tune here
+    return parser.parse_args()
 
 def get_default_config():
     return {
@@ -197,11 +211,11 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):
-            #p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            #grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
-            grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
+            grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
+            # p_plus = log_p_np.copy(); p_plus[i] += fd_eps
+            # p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
+            # grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
         adam.step()
@@ -221,12 +235,44 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
 # ─── MAIN GAN LOOP ────────────────────────────────────────────────────────────
 
-def run_gan_optimization(config):
+def run_gan_optimization(cmd_args):
+    # Start with your hardcoded defaults
+    config = get_default_config()
+    
+    # Convert Namespace to dict if it's not already a dict
+    # This allows the function to handle BOTH dicts and argparse objects
+    if not isinstance(cmd_args, dict):
+        cmd_args_dict = vars(cmd_args)
+    else:
+        cmd_args_dict = cmd_args
+
+    # Update config with whatever was passed in via command line/Slurm
+    for key, value in cmd_args_dict.items():
+        config[key] = value
+        
+    os.makedirs(config["output_dir"], exist_ok=True)
+    
+    os.makedirs(config["output_dir"], exist_ok=True)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Model Selection
+    if config["disc_type"] == "lstm":
+        D = disc.LSTMDiscriminator(input_size=3, hidden_size=16).to(device)
+    elif config["disc_type"] == "cnn":
+        D = disc.CNN1DDiscriminator(input_size=3, hidden_size=16).to(device)
+    elif config["disc_type"] == "mlp":
+        # We need a sample trajectory to find the sequence length for the MLP flatten layer
+        sample_goals_dummy = sample_goals(config)[:1]
+        sample_traj = collect_trajectories(config, sample_goals_dummy, config["init_k"], config["init_d"], True, None)
+        seq_len = sample_traj.shape[1]
+        D = disc.MLPDiscriminator(input_size=3, seq_length=seq_len).to(device)
+
+    #optimizer = optim.Adam(D.parameters(), lr=config["d_lr"])
     os.makedirs(config["output_dir"], exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running on {device}")
 
-    D = disc.LSTMDiscriminator(input_size=3, hidden_size=16, num_layers=2).to(device)
+    #D = disc.LSTMDiscriminator(input_size=3, hidden_size=16, num_layers=2).to(device)
     optimizer = optim.Adam(D.parameters(), lr=config["d_lr"])
 
     current_k = config["init_k"]
@@ -299,7 +345,6 @@ def save_results(history, D, config):
     ax2.set_title("Parameter Evolution")
     ax2.set_xlabel("GAN Iteration")
     ax2.set_ylabel("Parameter Value")
-    ax2.set_yscale("log")
     ax2.legend()
     ax2.grid(True)
 
@@ -311,10 +356,9 @@ def save_results(history, D, config):
 # ─── EXECUTION ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    algorithms = ["GD"]
-    for algo in algorithms:
-        print(f"\n{'='*50}\nStarting Optimization with {algo}\n{'='*50}")
-        config = get_default_config()
-        config["g_optim_algo"] = algo
-        config["output_dir"] = f"./gan_results_{algo.lower()}"
-        run_gan_optimization(config)
+    # 1. Parse the command line arguments
+    args = get_args()
+    
+    # 2. Pass the Namespace object (args) to the function
+    # This matches the new run_gan_optimization(cmd_args) signature
+    run_gan_optimization(args)
