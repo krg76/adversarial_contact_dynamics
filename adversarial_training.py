@@ -27,16 +27,16 @@ def get_default_config():
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0],
         "gan_iterations": 20,
-        "d_epochs": 20,
+        "d_epochs": 10,
         "d_lr": 0.00025,
         "d_batch_size": 16,
-        "d_r1_gamma": 2.0,          # ← NEW: set to 0.0 to disable R1 reg
+        "d_r1_gamma": 1e-3,          # ← NEW: set to 0.0 to disable R1 reg
         "g_optim_algo": "GD",
-        "g_max_iters": 50,
+        "g_max_iters": 20,
         "g_lr": 0.5,
         "g_eps": 0.0001,
         "g_reg": 1e-1,
-        "g_l2_weight": 1e-2,
+        "g_l2_weight": 1e-5,
         "init_k": 0.4,
         "init_d": 0.01,
         "gt_k": 0.5,
@@ -80,7 +80,7 @@ def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
     """Train the discriminator with BCE loss + R1 gradient penalty on real samples."""
     criterion = nn.BCELoss()
     device = next(D.parameters()).device
-    r1_gamma = config.get("d_r1_gamma", 10.0)
+    r1_gamma = config.get("d_r1_gamma", 0.0)
 
     X = np.vstack((real_trajs, fake_trajs))
     y = np.vstack((np.ones((len(real_trajs), 1)), np.zeros((len(fake_trajs), 1))))
@@ -195,7 +195,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         adam.step()
 
         with torch.no_grad():
-            log_params.clamp_(-10.0, 10.0)
+            log_params.clamp_(-3.0, 3.0)
 
         k, d = np.exp(log_p_np)
         print(f"  Step {step+1:>3d} | loss={f0:.6f} | k={k:.5f} (log_k={log_k:.5f}), d={d:.5f} (log_d={log_d:.5f})")
