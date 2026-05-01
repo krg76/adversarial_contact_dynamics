@@ -345,7 +345,6 @@ def save_results(history, D, config):
     ax2.set_title("Parameter Evolution")
     ax2.set_xlabel("GAN Iteration")
     ax2.set_ylabel("Parameter Value")
-    ax2.set_yscale("log")
     ax2.legend()
     ax2.grid(True)
 
