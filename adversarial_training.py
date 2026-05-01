@@ -1,4 +1,6 @@
 import os
+os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
+
 import copy
 import torch
 import torch.nn as nn
