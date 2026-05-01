@@ -23,7 +23,7 @@ class LSTMDiscriminator(nn.Module):
         self.fc = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, return_logits = False):
+    def forward(self, x):
         # Initialize hidden and cell states
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
@@ -35,10 +35,7 @@ class LSTMDiscriminator(nn.Module):
         # Decode the hidden state of the last time step
         out = self.fc(out[:, -1, :])
         
-        if return_logits:
-            return self.sigmoid(out), out
-        else:
-            return self.sigmoid(out)
+        return out
 
 def run_experiment():
     # 1. Hyperparameters
@@ -66,7 +63,7 @@ def run_experiment():
     )
 
     # 3. Model, Loss, Optimizer
-    model = TrajectoryDiscriminator(input_size, hidden_size, num_layers).to(device)
+    model = LSTMDiscriminator(input_size, hidden_size, num_layers).to(device)
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 

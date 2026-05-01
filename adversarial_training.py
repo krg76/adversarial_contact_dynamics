@@ -78,7 +78,7 @@ def collect_trajectories(config, goals, k, d, use_comfree, fixed_noise):
 
 def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
     """Train the discriminator with BCE loss + R1 gradient penalty on real samples."""
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()#nn.BCELoss()
     device = next(D.parameters()).device
     r1_gamma = config.get("d_r1_gamma", 0.0)
 
@@ -104,8 +104,15 @@ def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
             loss = criterion(outputs, labels)
 
             # ── R1 gradient penalty on real samples ───────────────────────────
+            
             if r1_gamma > 0.0:
-                real_seqs = seqs[:len(seqs) // 2].detach().requires_grad_(True)
+                # Corrected R1 logic
+                real_mask = (labels == 1).squeeze()
+                if real_mask.any():
+                    real_seqs = seqs[real_mask].detach().requires_grad_(True)
+                    with torch.backends.cudnn.flags(enabled=False):
+                        real_scores = D(real_seqs)
+                    # ... rest of the penalty calculation
 
                 # CuDNN RNNs don't support double backward, so disable it for this forward pass only
                 with torch.backends.cudnn.flags(enabled=False):
@@ -121,6 +128,7 @@ def train_discriminator(D, optimizer, real_trajs, fake_trajs, config):
                 loss = loss + r1_penalty
 
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(D.parameters(), max_norm=1.0)
             optimizer.step()
             epoch_loss += loss.item()
 
@@ -171,7 +179,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
         traj_tensor = torch.tensor(traj_array, dtype=torch.float32).to(device)
         with torch.no_grad():
-            d_scores, d_logits = D(traj_tensor, return_logits=True)
+            d_logits = D(traj_tensor)
+            d_scores = torch.sigmoid(d_logits)
             gan_loss = torch.mean(1.0 - d_scores).item()
             reg_loss = (config["g_reg"] * torch.mean(1.0 / torch.cosh(d_logits))).item()
             
@@ -189,7 +198,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            grad_np[i] = (objective(p_plus) - f0) / (2.0 * fd_eps)
+            grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
         adam.step()
