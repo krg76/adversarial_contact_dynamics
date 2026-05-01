@@ -33,7 +33,7 @@ def get_default_config():
         "d_r1_gamma": 1e-3,          # ← NEW: set to 0.0 to disable R1 reg
         "g_optim_algo": "GD",
         "g_max_iters": 20,
-        "g_lr": 0.5,
+        "g_lr": 0.05,
         "g_eps": 0.0001,
         "g_reg": 1e-1,
         "g_l2_weight": 1e-5,
@@ -197,11 +197,11 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):
+            #p_plus = log_p_np.copy(); p_plus[i] += fd_eps
+            #grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
-            # p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            # p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
-            # grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
+            p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
+            grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
         adam.step()
