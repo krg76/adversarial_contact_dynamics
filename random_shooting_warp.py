@@ -4,6 +4,9 @@ os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 import mujoco
 import mujoco_warp as mw
 import comfree_warp as cf_mjwarp
+import comfree_forward_mod as cf_mod
+
+
 
 import warp as wp
 import numpy as np
@@ -239,7 +242,7 @@ def main() -> None:
     mocap_idx = mj_model.body_mocapid[basket_body_id]
     mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
     frames   = render_trajectory(
-        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=use_comfree
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=False
     )
     print(optimal_qvel)
 
