@@ -34,8 +34,9 @@ def _compute_qfrc_constraint(
     efc_vel += J[worldid, efcid, i] * qvel_smooth_pred[worldid, i]
 
   # 3rd order non-linear parameters: 3 coefficients per system
-  num_param_sets = comfree_stiffness.shape[0] // 3
+  num_param_sets = 3#comfree_stiffness.shape[0] // 3
   base_idx = (worldid % num_param_sets) * 3
+  #base_idx = (worldid) * 3
 
   k1, k2, k3 = comfree_stiffness[base_idx], comfree_stiffness[base_idx + 1], comfree_stiffness[base_idx + 2]
   d1, d2, d3 = comfree_damping[base_idx], comfree_damping[base_idx + 1], comfree_damping[base_idx + 2]
