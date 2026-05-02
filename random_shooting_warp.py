@@ -34,13 +34,13 @@ TARGET_POS   = BASKET_MOCAP_POS
 
 # Cost Weights
 W_RUNNING_POS  = 0.05
-W_RUNNING_VEL  = 0.01
+W_RUNNING_VEL  = 0.001
 W_TERMINAL_POS = 100.0
 W_TERMINAL_VEL = 0.01
 
 # Comfree Warp parameters (if applicable)
-CF_STIFFNESS = [0.5, 0.005, 0.00005]
-CF_DAMPING   = [0.001, 0.00001, 0.00000001]
+CF_STIFFNESS = np.array([0.5, 0.001, 0.001], dtype=np.float32)
+CF_DAMPING   = np.array([0.002, 0.00002, 0.000002], dtype=np.float32)
 
 # Mocap configuration
 
@@ -59,6 +59,8 @@ def simulate_trajectories_parallel(
 
     # ── Reset: re-upload CPU data to get a clean GPU state ───────────────────
     if use_comfree:
+        cf_stiffness = np.tile(cf_stiffness, nworld)
+        cf_damping = np.tile(cf_damping, nworld)
         engine = cf_mjwarp
         model = engine.put_model(mj_model,
             comfree_stiffness=cf_stiffness,
@@ -94,8 +96,8 @@ def render_trajectory(
     duration: float,
     fps: int,
     use_comfree: bool = True,
-    cf_stiffness: float = 0.2,
-    cf_damping: float = 0.001,
+    cf_stiffness: float = CF_STIFFNESS,
+    cf_damping: float = CF_DAMPING,
 ) -> list[np.ndarray]:
     steps_per_frame = max(1, round(1.0 / (fps * mj_model.opt.timestep)))
     num_steps       = math.ceil(duration / mj_model.opt.timestep)
