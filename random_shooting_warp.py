@@ -1,5 +1,5 @@
 import os
-#os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
+os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 
 import mujoco
 import mujoco_warp as mw
