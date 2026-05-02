@@ -41,6 +41,7 @@ def get_default_config():
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0],
         "gan_iterations": 20,
+        "disc_type": "mlp",
         "d_epochs": 10,
         "d_lr": 0.000025,
         "d_batch_size": 16,
@@ -51,11 +52,11 @@ def get_default_config():
         "g_eps": 0.0001,
         "g_reg": 1e-1,
         "g_l2_weight": 1e-8,
-        "init_k": 0.4,
-        "init_d": 0.01,
-        "gt_k": 0.5,
-        "gt_d": 0.002,
-        "use_com_free_for_gt": True,
+        "init_k": [0.4, 0.01, 0.0005],
+        "init_d": [0.01, 0.001, 0.0001],
+        "gt_k": [0.5, 0.005, 0.00005],
+        "gt_d": [0.002, 0.00001, 0.00000001],
+        "use_com_free_for_gt": False,
         "output_dir": "./gan_comfree_tests_results"
     }
 
@@ -164,8 +165,9 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     D.eval()
 
+    init_p = np.concatenate([np.array(current_k), np.array(current_d)])
     log_params = torch.tensor(
-        np.log([current_k, current_d]),
+        np.log(init_p),
         dtype=torch.float64,
         requires_grad=False,
     )
@@ -174,7 +176,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
     fd_eps = config["g_eps"]
 
     def objective(log_p: np.ndarray) -> float:
-        k, d = np.exp(log_p)
+        p = np.exp(log_p)
+        k, d = p[:3], p[3:]
         generated_trajs = []
         for goal in goals:
             base_qvel = goal - starting_pos
@@ -206,32 +209,30 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     for step in range(config["g_max_iters"]):
         log_p_np = log_params.detach().numpy()
-        log_k, log_d = log_p_np.tolist()
         f0 = objective(log_p_np)
 
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
             grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
-            # p_plus = log_p_np.copy(); p_plus[i] += fd_eps
-            # p_minus = log_p_np.copy(); p_minus[i] -= fd_eps
-            # grad_np[i] = (objective(p_plus) - objective(p_minus)) / (2.0 * fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
         adam.step()
 
         with torch.no_grad():
-            log_params.clamp_(-10.0, 3.0)
+            log_params.clamp_(-25.0, 5.0)
 
-        k, d = np.exp(log_p_np)
-        print(f"  Step {step+1:>3d} | loss={f0:.6f} | k={k:.5f} (log_k={log_k:.5f}), d={d:.5f} (log_d={log_d:.5f})")
+        p_curr = np.exp(log_p_np)
+        k_str = ", ".join([f"{v:.2e}" for v in p_curr[:3]])
+        d_str = ", ".join([f"{v:.2e}" for v in p_curr[3:]])
+        print(f"  Step {step+1:>3d} | loss={f0:.6f} | k=[{k_str}], d=[{d_str}]")
 
         if f0 < best_loss:
             best_loss = f0
             best_log_p = log_p_np.copy()
 
-    best_k, best_d = np.exp(best_log_p)
-    return best_k, best_d, best_loss, gt_trajs
+    best_p = np.exp(best_log_p)
+    return best_p[:3], best_p[3:], best_loss, gt_trajs
 
 # ─── MAIN GAN LOOP ────────────────────────────────────────────────────────────
 
@@ -304,7 +305,9 @@ def run_gan_optimization(cmd_args):
         print("Optimizing ComFree parameters to fool the Discriminator...")
         new_goals = sample_goals(config)[:config["num_goals_gen_train"]]
         best_k, best_d, g_loss, new_gt_trajs = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
-        print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.5f}, D: {best_d:.5f}")
+        k_str = ", ".join([f"{v:.2e}" for v in best_k])
+        d_str = ", ".join([f"{v:.2e}" for v in best_d])
+        print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: [{k_str}], D: [{d_str}]")
 
         # Update goals and real trajectories buffer
         goals = np.vstack([goals, new_goals])
@@ -315,8 +318,8 @@ def run_gan_optimization(cmd_args):
             "iteration": iteration + 1,
             "d_loss": d_loss,
             "g_loss": g_loss,
-            "stiffness_k": current_k,
-            "damping_d": current_d
+            "k1": current_k[0], "k2": current_k[1], "k3": current_k[2],
+            "d1": current_d[0], "d2": current_d[1], "d3": current_d[2]
         })
 
     save_results(history, D, config)
@@ -338,10 +341,15 @@ def save_results(history, D, config):
     ax1.legend()
     ax1.grid(True)
 
-    ax2.plot(df["iteration"], df["stiffness_k"], label="Learned Stiffness (k)", marker='x', color='green')
-    ax2.axhline(config["gt_k"], color='green', linestyle='--', label="GT Stiffness")
-    ax2.plot(df["iteration"], df["damping_d"], label="Learned Damping (d)", marker='x', color='red')
-    ax2.axhline(config["gt_d"], color='red', linestyle='--', label="GT Damping")
+    ax2.plot(df["iteration"], df["k1"], label="k1", marker='x', color='green')
+    ax2.plot(df["iteration"], df["k2"], label="k2", marker='x', color='lime')
+    ax2.plot(df["iteration"], df["k3"], label="k3", marker='x', color='darkgreen')
+    ax2.axhline(config["gt_k"][0], color='green', linestyle='--', label="GT k1")
+
+    ax2.plot(df["iteration"], df["d1"], label="d1", marker='x', color='red')
+    ax2.plot(df["iteration"], df["d2"], label="d2", marker='x', color='orange')
+    ax2.plot(df["iteration"], df["d3"], label="d3", marker='x', color='brown')
+    ax2.axhline(config["gt_d"][0], color='red', linestyle='--', label="GT d1")
     ax2.set_title("Parameter Evolution")
     ax2.set_xlabel("GAN Iteration")
     ax2.set_ylabel("Parameter Value")
