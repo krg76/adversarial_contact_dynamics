@@ -37,10 +37,10 @@ def summarize_grid_search(base_directory=".", output_csv="grid_search_summary.cs
                     df = pd.read_csv(history_path)
                     
                     if not df.empty:
-                        # Get the final row (last recorded iteration)
+                        # Get the final row for losses and iteration count
                         final_row = df.iloc[-1]
                         
-                        summary_data.append({
+                        run_info = {
                             "run_name": item.name,
                             "architecture": arch,
                             "lr_d": lr_d,
@@ -48,9 +48,17 @@ def summarize_grid_search(base_directory=".", output_csv="grid_search_summary.cs
                             "final_iteration": final_row.get("iteration"),
                             "final_d_loss": final_row.get("d_loss"),
                             "final_g_loss": final_row.get("g_loss"),
-                            "final_stiffness_k": final_row.get("stiffness_k"),
-                            "final_damping_d": final_row.get("damping_d")
-                        })
+                        }
+
+                        # Define all potential parameter columns for both types
+                        param_cols = ["stiffness_k", "damping_d", "k1", "k2", "k3", "d1", "d2", "d3"]
+                        for col in param_cols:
+                            if col in df.columns:
+                                # Extract the last non-null value (useful if params stop being logged)
+                                val = df[col].dropna().iloc[-1] if not df[col].dropna().empty else None
+                                run_info[f"final_{col}"] = val
+
+                        summary_data.append(run_info)
                     else:
                         print(f"Warning: {history_path} is empty.")
                         
@@ -71,7 +79,7 @@ def summarize_grid_search(base_directory=".", output_csv="grid_search_summary.cs
 if __name__ == "__main__":
     # You can change '.' to the absolute path of the directory containing your run folders
     # e.g., target_dir = "/path/to/your/experiments/"
-    target_dir = "results/" 
+    target_dir = "results/nonliear_results" 
     
     summarize_grid_search(
         base_directory=target_dir, 
