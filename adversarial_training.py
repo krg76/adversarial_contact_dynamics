@@ -40,7 +40,7 @@ def get_default_config():
         "num_goals_gen_train": 5,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0],
-        "gan_iterations": 50,
+        "gan_iterations": 20,
         "disc_type": "mlp",
         "d_epochs": 10,
         "d_lr": 0.000225,
@@ -52,10 +52,10 @@ def get_default_config():
         "g_eps": 0.0001,
         "g_reg": 1e-1,
         "g_l2_weight": 1e-8,
-        "init_k": [0.4, 0.01, 0.0005],
-        "init_d": [0.01, 0.001, 0.0001],
+        "init_k": [0.2, 0.01, 0.0005],
+        "init_d": [0.01, 0.002, 0.0002],
         "gt_k": [0.5, 0.005, 0.00005],
-        "gt_d": [0.002, 0.00001, 0.00000001],
+        "gt_d": [0.001, 0.00001, 0.00000001],
         "use_com_free_for_gt": False,
         "output_dir": "./gan_comfree_tests_results"
     }

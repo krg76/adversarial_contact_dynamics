@@ -1,0 +1,384 @@
+Starting Task 3: Model=lstm, LR_D=0.0001, LR_G=0.0025
+Running on cuda
+Sampled 10 new goals.
+Collecting Ground Truth (Standard MuJoCo) trajectories...
+Warp 1.12.0 initialized:
+   CUDA Toolkit 12.9, Driver 12.8
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA RTX 5000 Ada Generation" (31 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /home/kg878/.cache/warp/1.12.0
+Module mujoco_warp._src.smooth f756680 load on device 'cuda:0' took 1.19 ms  (cached)
+Module mujoco_warp._src.collision_driver 4d8b905 load on device 'cuda:0' took 0.58 ms  (cached)
+Module _nxn_broadphase__locals__kernel_83765485 8376548 load on device 'cuda:0' took 0.52 ms  (cached)
+Module _primitive_narrowphase__locals__primitive_narrowphase_799bf360 799bf36 load on device 'cuda:0' took 0.58 ms  (cached)
+Module mujoco_warp._src.constraint 63c97cb load on device 'cuda:0' took 1.33 ms  (cached)
+Module mujoco_warp._src.passive 7fb8524 load on device 'cuda:0' took 0.66 ms  (cached)
+Module mujoco_warp._src.forward 5a5c0b5 load on device 'cuda:0' took 0.81 ms  (cached)
+Module mujoco_warp._src.support 343d1ae load on device 'cuda:0' took 0.64 ms  (cached)
+Module _tile_cholesky_factorize_solve__locals__cholesky_factorize_solve_31e2b081 1603efb load on device 'cuda:0' took 25.44 ms  (cached)
+Module mujoco_warp._src.solver eaac975 load on device 'cuda:0' took 1.06 ms  (cached)
+Module solve_init_jaref__locals__kernel_21fae504 21fae50 load on device 'cuda:0' took 0.68 ms  (cached)
+Module mul_m_dense__locals___mul_m_dense_fbd74bb9 fbd74bb load on device 'cuda:0' took 0.66 ms  (cached)
+Module update_constraint_efc__locals__kernel_d4ac54f8 d4ac54f load on device 'cuda:0' took 0.75 ms  (cached)
+Module update_constraint_gauss_cost__locals__kernel_73299c19 73299c1 load on device 'cuda:0' took 0.52 ms  (cached)
+Module update_gradient_JTDAJ_dense_tiled__locals__kernel_92d753e0 6f5ab40 load on device 'cuda:0' took 0.72 ms  (cached)
+Module update_gradient_cholesky__locals__kernel_1e67b2d5 4da60ef load on device 'cuda:0' took 26.01 ms  (cached)
+Module linesearch_iterative__locals__kernel_e835d44f c716e5e load on device 'cuda:0' took 0.65 ms  (cached)
+Module update_constraint_efc__locals__kernel_5c3dedb8 5c3dedb load on device 'cuda:0' took 0.58 ms  (cached)
+Module _tile_euler_dense__locals__euler_dense_c71389e7 8e3457a load on device 'cuda:0' took 25.80 ms  (cached)
+
+=== GAN Iteration 1/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Module comfree_warp.mujoco_warp._src.smooth c02eb38 load on device 'cuda:0' took 7.67 ms  (cached)
+Module _tile_cholesky_factorize__locals__cholesky_factorize_d03d54d2 1278567 load on device 'cuda:0' took 21.91 ms  (cached)
+Module comfree_warp.mujoco_warp._src.collision_driver 4d8b905 load on device 'cuda:0' took 4.28 ms  (cached)
+Module _primitive_narrowphase__locals__primitive_narrowphase_fa8f2c5f fa8f2c5 load on device 'cuda:0' took 5.45 ms  (cached)
+Module comfree_warp.comfree_core._src.constraint 244f68b load on device 'cuda:0' took 5.56 ms  (cached)
+Module comfree_warp.mujoco_warp._src.passive 5be88d0 load on device 'cuda:0' took 5.34 ms  (cached)
+Module comfree_warp.mujoco_warp._src.forward 13e94f4 load on device 'cuda:0' took 5.63 ms  (cached)
+Module comfree_warp.mujoco_warp._src.support 343d1ae load on device 'cuda:0' took 4.87 ms  (cached)
+Module comfree_warp.comfree_core._src.forward 7a027f4 load on device 'cuda:0' took 5.39 ms  (cached)
+Module comfree_forward_mod b48f0c7 load on device 'cuda:0' took 3.22 ms  (cached)
+Module _tile_cholesky_solve__locals__cholesky_solve_612ff9f0 d6a4fa0 load on device 'cuda:0' took 21.75 ms  (cached)
+Module comfree_warp.mujoco_warp._src.sensor db84035 load on device 'cuda:0' took 6.38 ms  (cached)
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6909
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=25.407460 | k=[1.76e-01, 9.43e-03, 5.00e-04], d=[8.89e-03, 1.86e-03, 1.62e-04]
+  Step   2 | loss=17.267721 | k=[1.78e-01, 9.43e-03, 5.00e-04], d=[8.82e-03, 1.82e-03, 1.55e-04]
+  Step   3 | loss=15.920071 | k=[1.80e-01, 9.40e-03, 5.00e-04], d=[8.89e-03, 1.83e-03, 1.49e-04]
+  Step   4 | loss=14.902533 | k=[1.78e-01, 9.34e-03, 5.00e-04], d=[8.84e-03, 1.80e-03, 1.41e-04]
+  Step   5 | loss=13.487661 | k=[1.79e-01, 9.37e-03, 5.00e-04], d=[8.84e-03, 1.80e-03, 1.32e-04]
+  Step   6 | loss=12.153370 | k=[1.77e-01, 9.37e-03, 5.00e-04], d=[8.51e-03, 1.75e-03, 1.22e-04]
+  Step   7 | loss=10.545959 | k=[1.78e-01, 9.37e-03, 5.00e-04], d=[8.48e-03, 1.75e-03, 1.14e-04]
+  Step   8 | loss=9.486599 | k=[1.79e-01, 9.37e-03, 5.00e-04], d=[8.62e-03, 1.74e-03, 1.10e-04]
+  Step   9 | loss=8.963422 | k=[1.79e-01, 9.37e-03, 5.00e-04], d=[8.66e-03, 1.74e-03, 1.07e-04]
+  Step  10 | loss=8.521021 | k=[1.80e-01, 9.38e-03, 5.00e-04], d=[8.70e-03, 1.72e-03, 1.04e-04]
+Generator Loss: 8.5210 | Updated Params -> K: [1.80e-01, 9.38e-03, 5.00e-04], D: [8.70e-03, 1.72e-03, 1.04e-04]
+
+=== GAN Iteration 2/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6864
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=8.214654 | k=[1.80e-01, 9.38e-03, 5.00e-04], d=[8.65e-03, 1.70e-03, 1.01e-04]
+  Step   2 | loss=7.857017 | k=[1.79e-01, 9.36e-03, 5.00e-04], d=[8.54e-03, 1.68e-03, 9.88e-05]
+  Step   3 | loss=7.502351 | k=[1.78e-01, 9.36e-03, 5.00e-04], d=[8.50e-03, 1.67e-03, 9.52e-05]
+  Step   4 | loss=7.075358 | k=[1.81e-01, 9.36e-03, 5.00e-04], d=[8.49e-03, 1.66e-03, 9.27e-05]
+  Step   5 | loss=6.779358 | k=[1.79e-01, 9.35e-03, 5.00e-04], d=[8.48e-03, 1.63e-03, 8.90e-05]
+  Step   6 | loss=6.337152 | k=[1.81e-01, 9.33e-03, 5.00e-04], d=[8.46e-03, 1.62e-03, 8.65e-05]
+  Step   7 | loss=6.050254 | k=[1.80e-01, 9.33e-03, 5.00e-04], d=[8.38e-03, 1.61e-03, 8.46e-05]
+  Step   8 | loss=5.840094 | k=[1.80e-01, 9.33e-03, 5.00e-04], d=[8.34e-03, 1.60e-03, 8.23e-05]
+  Step   9 | loss=5.592660 | k=[1.79e-01, 9.33e-03, 5.00e-04], d=[8.28e-03, 1.58e-03, 7.96e-05]
+  Step  10 | loss=5.301231 | k=[1.78e-01, 9.31e-03, 5.00e-04], d=[8.27e-03, 1.58e-03, 7.81e-05]
+Generator Loss: 5.3012 | Updated Params -> K: [1.78e-01, 9.31e-03, 5.00e-04], D: [8.27e-03, 1.58e-03, 7.81e-05]
+
+=== GAN Iteration 3/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6807
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=5.107669 | k=[1.79e-01, 9.30e-03, 4.99e-04], d=[8.23e-03, 1.58e-03, 7.66e-05]
+  Step   2 | loss=4.962115 | k=[1.79e-01, 9.30e-03, 4.99e-04], d=[8.25e-03, 1.56e-03, 7.51e-05]
+  Step   3 | loss=4.810134 | k=[1.79e-01, 9.31e-03, 5.00e-04], d=[8.24e-03, 1.56e-03, 7.37e-05]
+  Step   4 | loss=4.671786 | k=[1.78e-01, 9.29e-03, 4.99e-04], d=[8.22e-03, 1.55e-03, 7.22e-05]
+  Step   5 | loss=4.525031 | k=[1.78e-01, 9.28e-03, 4.99e-04], d=[8.21e-03, 1.54e-03, 7.08e-05]
+  Step   6 | loss=4.396549 | k=[1.78e-01, 9.28e-03, 4.99e-04], d=[8.20e-03, 1.53e-03, 6.96e-05]
+  Step   7 | loss=4.290068 | k=[1.78e-01, 9.27e-03, 4.99e-04], d=[8.22e-03, 1.53e-03, 6.86e-05]
+  Step   8 | loss=4.196655 | k=[1.78e-01, 9.28e-03, 4.99e-04], d=[8.22e-03, 1.52e-03, 6.74e-05]
+  Step   9 | loss=4.093169 | k=[1.78e-01, 9.28e-03, 4.99e-04], d=[8.22e-03, 1.51e-03, 6.64e-05]
+  Step  10 | loss=4.002184 | k=[1.77e-01, 9.27e-03, 4.99e-04], d=[8.19e-03, 1.51e-03, 6.54e-05]
+Generator Loss: 4.0022 | Updated Params -> K: [1.77e-01, 9.27e-03, 4.99e-04], D: [8.19e-03, 1.51e-03, 6.54e-05]
+
+=== GAN Iteration 4/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6715
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=4.507811 | k=[1.78e-01, 9.27e-03, 4.99e-04], d=[8.20e-03, 1.50e-03, 6.45e-05]
+  Step   2 | loss=4.417909 | k=[1.78e-01, 9.29e-03, 4.99e-04], d=[8.21e-03, 1.50e-03, 6.38e-05]
+  Step   3 | loss=4.344727 | k=[1.78e-01, 9.28e-03, 4.99e-04], d=[8.20e-03, 1.49e-03, 6.27e-05]
+  Step   4 | loss=4.236493 | k=[1.78e-01, 9.29e-03, 4.99e-04], d=[8.19e-03, 1.49e-03, 6.17e-05]
+  Step   5 | loss=4.141660 | k=[1.79e-01, 9.30e-03, 4.99e-04], d=[8.18e-03, 1.48e-03, 6.09e-05]
+  Step   6 | loss=4.065969 | k=[1.79e-01, 9.30e-03, 4.99e-04], d=[8.19e-03, 1.47e-03, 6.01e-05]
+  Step   7 | loss=3.982613 | k=[1.78e-01, 9.31e-03, 4.99e-04], d=[8.17e-03, 1.47e-03, 5.91e-05]
+  Step   8 | loss=3.882788 | k=[1.78e-01, 9.31e-03, 4.99e-04], d=[8.16e-03, 1.47e-03, 5.83e-05]
+  Step   9 | loss=3.815851 | k=[1.78e-01, 9.31e-03, 4.99e-04], d=[8.16e-03, 1.46e-03, 5.75e-05]
+  Step  10 | loss=3.739840 | k=[1.79e-01, 9.31e-03, 4.99e-04], d=[8.18e-03, 1.45e-03, 5.71e-05]
+Generator Loss: 3.7398 | Updated Params -> K: [1.79e-01, 9.31e-03, 4.99e-04], D: [8.18e-03, 1.45e-03, 5.71e-05]
+
+=== GAN Iteration 5/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6562
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=3.057561 | k=[1.79e-01, 9.32e-03, 4.99e-04], d=[8.18e-03, 1.45e-03, 5.66e-05]
+  Step   2 | loss=3.023867 | k=[1.79e-01, 9.33e-03, 4.99e-04], d=[8.20e-03, 1.45e-03, 5.61e-05]
+  Step   3 | loss=2.990417 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.21e-03, 1.45e-03, 5.56e-05]
+  Step   4 | loss=2.954568 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.21e-03, 1.44e-03, 5.51e-05]
+  Step   5 | loss=2.914054 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.19e-03, 1.43e-03, 5.45e-05]
+  Step   6 | loss=2.872963 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.19e-03, 1.43e-03, 5.41e-05]
+  Step   7 | loss=2.847386 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.20e-03, 1.43e-03, 5.37e-05]
+  Step   8 | loss=2.814376 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.20e-03, 1.42e-03, 5.32e-05]
+  Step   9 | loss=2.780767 | k=[1.79e-01, 9.34e-03, 4.99e-04], d=[8.20e-03, 1.42e-03, 5.28e-05]
+  Step  10 | loss=2.755181 | k=[1.78e-01, 9.34e-03, 4.99e-04], d=[8.20e-03, 1.41e-03, 5.23e-05]
+Generator Loss: 2.7552 | Updated Params -> K: [1.78e-01, 9.34e-03, 4.99e-04], D: [8.20e-03, 1.41e-03, 5.23e-05]
+
+=== GAN Iteration 6/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.6306
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.853108 | k=[1.78e-01, 9.34e-03, 4.99e-04], d=[8.20e-03, 1.41e-03, 5.19e-05]
+  Step   2 | loss=2.824016 | k=[1.79e-01, 9.35e-03, 4.99e-04], d=[8.20e-03, 1.41e-03, 5.15e-05]
+  Step   3 | loss=2.794644 | k=[1.78e-01, 9.35e-03, 4.99e-04], d=[8.21e-03, 1.40e-03, 5.11e-05]
+  Step   4 | loss=2.762017 | k=[1.78e-01, 9.35e-03, 4.99e-04], d=[8.20e-03, 1.40e-03, 5.06e-05]
+  Step   5 | loss=2.729011 | k=[1.78e-01, 9.35e-03, 4.99e-04], d=[8.19e-03, 1.39e-03, 5.02e-05]
+  Step   6 | loss=2.700203 | k=[1.78e-01, 9.35e-03, 4.99e-04], d=[8.18e-03, 1.39e-03, 4.97e-05]
+  Step   7 | loss=2.670562 | k=[1.78e-01, 9.35e-03, 4.99e-04], d=[8.17e-03, 1.39e-03, 4.94e-05]
+  Step   8 | loss=2.644235 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.38e-03, 4.90e-05]
+  Step   9 | loss=2.618071 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.38e-03, 4.86e-05]
+  Step  10 | loss=2.590089 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.38e-03, 4.82e-05]
+Generator Loss: 2.5901 | Updated Params -> K: [1.78e-01, 9.36e-03, 4.99e-04], D: [8.16e-03, 1.38e-03, 4.82e-05]
+
+=== GAN Iteration 7/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.5906
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.929675 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.38e-03, 4.78e-05]
+  Step   2 | loss=2.900997 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.37e-03, 4.74e-05]
+  Step   3 | loss=2.870633 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.37e-03, 4.70e-05]
+  Step   4 | loss=2.842316 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.37e-03, 4.66e-05]
+  Step   5 | loss=2.808982 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.36e-03, 4.62e-05]
+  Step   6 | loss=2.779101 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.36e-03, 4.59e-05]
+  Step   7 | loss=2.753662 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.36e-03, 4.55e-05]
+  Step   8 | loss=2.729516 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.36e-03, 4.52e-05]
+  Step   9 | loss=2.704501 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.35e-03, 4.48e-05]
+  Step  10 | loss=2.678819 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.35e-03, 4.45e-05]
+Generator Loss: 2.6788 | Updated Params -> K: [1.78e-01, 9.36e-03, 4.99e-04], D: [8.17e-03, 1.35e-03, 4.45e-05]
+
+=== GAN Iteration 8/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.5292
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.530686 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.17e-03, 1.35e-03, 4.42e-05]
+  Step   2 | loss=2.510150 | k=[1.78e-01, 9.36e-03, 4.99e-04], d=[8.16e-03, 1.35e-03, 4.39e-05]
+  Step   3 | loss=2.488753 | k=[1.78e-01, 9.37e-03, 4.99e-04], d=[8.16e-03, 1.34e-03, 4.36e-05]
+  Step   4 | loss=2.472121 | k=[1.78e-01, 9.37e-03, 4.99e-04], d=[8.16e-03, 1.34e-03, 4.33e-05]
+  Step   5 | loss=2.453348 | k=[1.78e-01, 9.38e-03, 4.99e-04], d=[8.16e-03, 1.34e-03, 4.30e-05]
+  Step   6 | loss=2.434095 | k=[1.78e-01, 9.37e-03, 4.99e-04], d=[8.16e-03, 1.33e-03, 4.28e-05]
+  Step   7 | loss=2.415015 | k=[1.77e-01, 9.37e-03, 4.99e-04], d=[8.16e-03, 1.33e-03, 4.25e-05]
+  Step   8 | loss=2.395353 | k=[1.77e-01, 9.38e-03, 4.99e-04], d=[8.16e-03, 1.33e-03, 4.22e-05]
+  Step   9 | loss=2.378150 | k=[1.77e-01, 9.38e-03, 4.99e-04], d=[8.16e-03, 1.33e-03, 4.19e-05]
+  Step  10 | loss=2.359228 | k=[1.77e-01, 9.38e-03, 4.99e-04], d=[8.14e-03, 1.32e-03, 4.16e-05]
+Generator Loss: 2.3592 | Updated Params -> K: [1.77e-01, 9.38e-03, 4.99e-04], D: [8.14e-03, 1.32e-03, 4.16e-05]
+
+=== GAN Iteration 9/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.4551
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.253396 | k=[1.77e-01, 9.38e-03, 4.99e-04], d=[8.14e-03, 1.32e-03, 4.14e-05]
+  Step   2 | loss=2.242303 | k=[1.77e-01, 9.37e-03, 4.99e-04], d=[8.14e-03, 1.32e-03, 4.12e-05]
+  Step   3 | loss=2.229696 | k=[1.77e-01, 9.37e-03, 4.99e-04], d=[8.14e-03, 1.31e-03, 4.10e-05]
+  Step   4 | loss=2.217098 | k=[1.77e-01, 9.37e-03, 4.99e-04], d=[8.15e-03, 1.31e-03, 4.08e-05]
+  Step   5 | loss=2.205091 | k=[1.77e-01, 9.38e-03, 4.61e-06], d=[8.15e-03, 1.31e-03, 4.06e-05]
+  Step   6 | loss=2.194488 | k=[1.77e-01, 9.38e-03, 4.61e-06], d=[8.14e-03, 1.31e-03, 4.04e-05]
+  Step   7 | loss=2.179386 | k=[1.77e-01, 9.38e-03, 4.61e-06], d=[8.14e-03, 1.30e-03, 4.01e-05]
+  Step   8 | loss=2.165126 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.30e-03, 3.99e-05]
+  Step   9 | loss=2.151451 | k=[1.77e-01, 9.38e-03, 4.61e-06], d=[8.13e-03, 1.30e-03, 3.97e-05]
+  Step  10 | loss=2.139210 | k=[1.77e-01, 9.38e-03, 4.61e-06], d=[8.14e-03, 1.30e-03, 3.95e-05]
+Generator Loss: 2.1392 | Updated Params -> K: [1.77e-01, 9.38e-03, 4.61e-06], D: [8.14e-03, 1.30e-03, 3.95e-05]
+
+=== GAN Iteration 10/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.3771
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.183852 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.29e-03, 3.93e-05]
+  Step   2 | loss=2.171859 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.29e-03, 3.91e-05]
+  Step   3 | loss=2.159698 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.29e-03, 3.89e-05]
+  Step   4 | loss=2.149872 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.15e-03, 1.29e-03, 3.88e-05]
+  Step   5 | loss=2.142072 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.29e-03, 3.86e-05]
+  Step   6 | loss=2.131539 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.28e-03, 3.84e-05]
+  Step   7 | loss=2.120491 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.28e-03, 3.82e-05]
+  Step   8 | loss=2.110437 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.28e-03, 3.80e-05]
+  Step   9 | loss=2.100201 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.28e-03, 3.78e-05]
+  Step  10 | loss=2.088770 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.27e-03, 3.77e-05]
+Generator Loss: 2.0888 | Updated Params -> K: [1.77e-01, 9.37e-03, 4.61e-06], D: [8.13e-03, 1.27e-03, 3.77e-05]
+
+=== GAN Iteration 11/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.3026
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.231450 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.27e-03, 3.75e-05]
+  Step   2 | loss=2.219640 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.27e-03, 3.73e-05]
+  Step   3 | loss=2.206716 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.27e-03, 3.71e-05]
+  Step   4 | loss=2.196197 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.12e-03, 1.26e-03, 3.69e-05]
+  Step   5 | loss=2.184814 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.26e-03, 3.67e-05]
+  Step   6 | loss=2.173806 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.12e-03, 1.26e-03, 3.66e-05]
+  Step   7 | loss=2.163695 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.26e-03, 3.64e-05]
+  Step   8 | loss=2.153772 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.14e-03, 1.26e-03, 3.62e-05]
+  Step   9 | loss=2.143945 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.25e-03, 3.60e-05]
+  Step  10 | loss=2.133187 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.25e-03, 3.59e-05]
+Generator Loss: 2.1332 | Updated Params -> K: [1.77e-01, 9.37e-03, 4.61e-06], D: [8.13e-03, 1.25e-03, 3.59e-05]
+
+=== GAN Iteration 12/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.2340
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.176856 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.25e-03, 3.57e-05]
+  Step   2 | loss=2.167203 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.25e-03, 3.56e-05]
+  Step   3 | loss=2.157095 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.13e-03, 1.25e-03, 3.54e-05]
+  Step   4 | loss=2.147769 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.13e-03, 1.24e-03, 3.52e-05]
+  Step   5 | loss=2.138062 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.12e-03, 1.24e-03, 3.50e-05]
+  Step   6 | loss=2.126490 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.11e-03, 1.24e-03, 3.49e-05]
+  Step   7 | loss=2.116383 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.11e-03, 1.24e-03, 3.47e-05]
+  Step   8 | loss=2.106539 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.11e-03, 1.23e-03, 3.46e-05]
+  Step   9 | loss=2.096848 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.11e-03, 1.23e-03, 3.44e-05]
+  Step  10 | loss=2.087277 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.11e-03, 1.23e-03, 3.42e-05]
+Generator Loss: 2.0873 | Updated Params -> K: [1.77e-01, 9.37e-03, 4.61e-06], D: [8.11e-03, 1.23e-03, 3.42e-05]
+
+=== GAN Iteration 13/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.1840
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=2.122213 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.11e-03, 1.23e-03, 3.41e-05]
+  Step   2 | loss=2.111787 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.22e-03, 3.40e-05]
+  Step   3 | loss=2.103223 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.22e-03, 3.38e-05]
+  Step   4 | loss=2.095372 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.22e-03, 3.37e-05]
+  Step   5 | loss=2.088210 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.22e-03, 3.36e-05]
+  Step   6 | loss=2.078996 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.22e-03, 3.34e-05]
+  Step   7 | loss=2.071087 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.21e-03, 3.33e-05]
+  Step   8 | loss=2.062227 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.21e-03, 3.31e-05]
+  Step   9 | loss=2.053575 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.21e-03, 3.30e-05]
+  Step  10 | loss=2.046719 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.09e-03, 1.21e-03, 3.29e-05]
+Generator Loss: 2.0467 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.09e-03, 1.21e-03, 3.29e-05]
+
+=== GAN Iteration 14/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.1482
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.918181 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.21e-03, 3.27e-05]
+  Step   2 | loss=1.911912 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.21e-03, 3.26e-05]
+  Step   3 | loss=1.905857 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.25e-05]
+  Step   4 | loss=1.900962 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.24e-05]
+  Step   5 | loss=1.895113 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.23e-05]
+  Step   6 | loss=1.889838 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.22e-05]
+  Step   7 | loss=1.885179 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.11e-03, 1.20e-03, 3.21e-05]
+  Step   8 | loss=1.879434 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.20e-05]
+  Step   9 | loss=1.873640 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.20e-03, 3.19e-05]
+  Step  10 | loss=1.868607 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.11e-03, 1.19e-03, 3.18e-05]
+Generator Loss: 1.8686 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.11e-03, 1.19e-03, 3.18e-05]
+
+=== GAN Iteration 15/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.1189
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.955730 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.19e-03, 3.17e-05]
+  Step   2 | loss=1.948459 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.19e-03, 3.15e-05]
+  Step   3 | loss=1.941939 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.10e-03, 1.19e-03, 3.14e-05]
+  Step   4 | loss=1.936007 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.10e-03, 1.19e-03, 3.13e-05]
+  Step   5 | loss=1.929702 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.09e-03, 1.19e-03, 3.12e-05]
+  Step   6 | loss=1.923094 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.11e-05]
+  Step   7 | loss=1.917243 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.10e-05]
+  Step   8 | loss=1.911365 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.09e-05]
+  Step   9 | loss=1.905662 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.08e-05]
+  Step  10 | loss=1.900348 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.07e-05]
+Generator Loss: 1.9003 | Updated Params -> K: [1.77e-01, 9.37e-03, 4.61e-06], D: [8.09e-03, 1.18e-03, 3.07e-05]
+
+=== GAN Iteration 16/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.0977
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.953276 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.18e-03, 3.05e-05]
+  Step   2 | loss=1.946953 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.17e-03, 3.04e-05]
+  Step   3 | loss=1.940805 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.09e-03, 1.17e-03, 3.03e-05]
+  Step   4 | loss=1.933991 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.17e-03, 3.02e-05]
+  Step   5 | loss=1.927495 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.17e-03, 3.01e-05]
+  Step   6 | loss=1.921971 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.08e-03, 1.17e-03, 3.00e-05]
+  Step   7 | loss=1.916631 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.08e-03, 1.17e-03, 2.99e-05]
+  Step   8 | loss=1.910440 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.98e-05]
+  Step   9 | loss=1.904761 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.97e-05]
+  Step  10 | loss=1.898724 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.96e-05]
+Generator Loss: 1.8987 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.08e-03, 1.16e-03, 2.96e-05]
+
+=== GAN Iteration 17/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.0813
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.958209 | k=[1.77e-01, 9.37e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.95e-05]
+  Step   2 | loss=1.952715 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.93e-05]
+  Step   3 | loss=1.945588 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.16e-03, 2.92e-05]
+  Step   4 | loss=1.939460 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.15e-03, 2.91e-05]
+  Step   5 | loss=1.933659 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.15e-03, 2.90e-05]
+  Step   6 | loss=1.927680 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.15e-03, 2.89e-05]
+  Step   7 | loss=1.921395 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.15e-03, 2.88e-05]
+  Step   8 | loss=1.915090 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.15e-03, 2.87e-05]
+  Step   9 | loss=1.909548 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.15e-03, 2.86e-05]
+  Step  10 | loss=1.904444 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.08e-03, 1.14e-03, 2.85e-05]
+Generator Loss: 1.9044 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.08e-03, 1.14e-03, 2.85e-05]
+
+=== GAN Iteration 18/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.0683
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.828036 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.14e-03, 2.85e-05]
+  Step   2 | loss=1.822936 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.14e-03, 2.84e-05]
+  Step   3 | loss=1.818672 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.14e-03, 2.83e-05]
+  Step   4 | loss=1.814534 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.14e-03, 2.82e-05]
+  Step   5 | loss=1.809780 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.14e-03, 2.81e-05]
+  Step   6 | loss=1.805049 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.07e-03, 1.13e-03, 2.80e-05]
+  Step   7 | loss=1.801166 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.79e-05]
+  Step   8 | loss=1.795950 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.78e-05]
+  Step   9 | loss=1.790635 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.78e-05]
+  Step  10 | loss=1.786673 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.77e-05]
+Generator Loss: 1.7867 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.06e-03, 1.13e-03, 2.77e-05]
+
+=== GAN Iteration 19/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.0580
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.731920 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.76e-05]
+  Step   2 | loss=1.728840 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.13e-03, 2.75e-05]
+  Step   3 | loss=1.725190 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.12e-03, 2.75e-05]
+  Step   4 | loss=1.721565 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.12e-03, 2.74e-05]
+  Step   5 | loss=1.718295 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.06e-03, 1.12e-03, 2.73e-05]
+  Step   6 | loss=1.715218 | k=[1.77e-01, 9.35e-03, 4.61e-06], d=[8.06e-03, 1.12e-03, 2.73e-05]
+  Step   7 | loss=1.711980 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.05e-03, 1.12e-03, 2.72e-05]
+  Step   8 | loss=1.708462 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.05e-03, 1.12e-03, 2.71e-05]
+  Step   9 | loss=1.704910 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.05e-03, 1.12e-03, 2.70e-05]
+  Step  10 | loss=1.701038 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.70e-05]
+Generator Loss: 1.7010 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.04e-03, 1.11e-03, 2.70e-05]
+
+=== GAN Iteration 20/20 ===
+Collecting Generated (ComFree_Warp) trajectories...
+Training Discriminator for 10 epochs...
+Discriminator Loss: 0.0495
+Optimizing ComFree parameters to fool the Discriminator...
+  Step   1 | loss=1.741246 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.69e-05]
+  Step   2 | loss=1.738012 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.68e-05]
+  Step   3 | loss=1.734134 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.67e-05]
+  Step   4 | loss=1.730963 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.67e-05]
+  Step   5 | loss=1.727251 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.66e-05]
+  Step   6 | loss=1.723820 | k=[1.77e-01, 9.35e-03, 4.61e-06], d=[8.04e-03, 1.11e-03, 2.65e-05]
+  Step   7 | loss=1.720012 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.03e-03, 1.10e-03, 2.65e-05]
+  Step   8 | loss=1.716427 | k=[1.77e-01, 9.35e-03, 4.61e-06], d=[8.03e-03, 1.10e-03, 2.64e-05]
+  Step   9 | loss=1.713046 | k=[1.77e-01, 9.35e-03, 4.61e-06], d=[8.03e-03, 1.10e-03, 2.63e-05]
+  Step  10 | loss=1.709862 | k=[1.77e-01, 9.36e-03, 4.61e-06], d=[8.03e-03, 1.10e-03, 2.62e-05]
+Generator Loss: 1.7099 | Updated Params -> K: [1.77e-01, 9.36e-03, 4.61e-06], D: [8.03e-03, 1.10e-03, 2.62e-05]
+
+Training complete. Artifacts saved to: /home/kg878/scratch_pi_amd78/kg878/gan_training/results/run_lstm_lr_d0.0001_lr_g0.0025

@@ -15,8 +15,8 @@ conda activate MJW
 
 # 1. Define your parameter grids
 MODELS=("lstm" "cnn" "mlp")
-LRS_D=("0.0005" "0.00025" "0.000225")
-LRS_G=("0.05" "0.0025" "0.000125")
+LRS_D=("0.0002" "0.0001" "0.00005")
+LRS_G=("0.0025" "0.00125" "0.000625")
 
 # 2. Map the Task ID to specific indices
 # Indexing math:
