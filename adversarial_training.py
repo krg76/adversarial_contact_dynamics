@@ -54,7 +54,7 @@ def get_default_config():
         "d_batch_size": 16,
         "d_r1_gamma": 1e-3,          # ← NEW: set to 0.0 to disable R1 reg
         "g_optim_algo": "GD",
-        "g_max_iters": 10,
+        "g_max_iters": 2,#10,
         "g_lr": 0.00125,
         "g_eps": 0.0001,
         "g_reg": 0,#1e-1,
@@ -172,30 +172,22 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     D.eval()
 
-    #init_p = np.concatenate([np.array(current_k), np.array(current_d)])
-    init_p = np.concatenate([np.array([current_k]), np.array([current_d])])
-    log_params = torch.tensor(
-        np.log(init_p),
-        dtype=torch.float64,
-        requires_grad=False,
-    )
+    # Create a 2-element array: [k, d]
+    init_p = np.array([current_k, current_d], dtype=np.float64)
+    log_params = torch.tensor(np.log(init_p), requires_grad=False)
     log_params.grad = torch.zeros_like(log_params)
     adam = torch.optim.SGD([log_params], lr=config["g_lr"])
     fd_eps = config["g_eps"]
 
-    warp_model = cf_mjwarp.put_model(mj_model,
-        comfree_stiffness=init_p[0],
-        comfree_damping=init_p[1])
-    warp_data = cf_mjwarp.put_data(mj_model, mj_data, nworld=config["mppi_samples"])
-
     def objective(log_p: np.ndarray) -> float:
-        k = float(np.clip(np.exp(log_p_np[0]), 1e-4, 50.0))   # stiffness bounds
-        d = float(np.clip(np.exp(log_p_np[1]), 1e-6, 5.0))    # damping bounds
         p = np.exp(log_p)
-        k, d = p[0], p[1]
+        # Extract as single scalars
+        k, d = p[0], p[1] 
+        
         generated_trajs = []
         for goal in goals:
             base_qvel = goal - starting_pos
+            # Pass scalars to your simulation functions
             opt_qvel = lp.get_iterative_mppi_qvel(
                 mj_model, mj_data, base_qvel, config["duration"],
                 k, d, goal, fixed_noise=fixed_noise,
@@ -254,7 +246,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
             best_log_p = log_p_np.copy()
 
     best_p = np.exp(best_log_p)
-    return best_p[:3], best_p[3:], best_loss, gt_trajs
+    # Return as scalars
+    return best_p[0], best_p[1], best_loss, gt_trajs
 
 # ─── MAIN GAN LOOP ────────────────────────────────────────────────────────────
 
@@ -324,12 +317,10 @@ def run_gan_optimization(cmd_args):
         d_loss = train_discriminator(D, optimizer, real_trajs, fake_trajs, config)
         print(f"Discriminator Loss: {d_loss:.4f}")
 
-        print("Optimizing ComFree parameters to fool the Discriminator...")
+        print("Optimizing ComFree parameters...")
         new_goals = sample_goals(config)[:config["num_goals_gen_train"]]
         best_k, best_d, g_loss, new_gt_trajs = optimize_parameters(D, config, new_goals, current_k, current_d, fixed_noise)
-        k_str = ", ".join([f"{v:.2e}" for v in best_k])
-        d_str = ", ".join([f"{v:.2e}" for v in best_d])
-        print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: [{k_str}], D: [{d_str}]")
+        print(f"Generator Loss: {g_loss:.4f} | Updated Params -> K: {best_k:.2e}, D: {best_d:.2e}")
 
         # Update goals and real trajectories buffer
         goals = np.vstack([goals, new_goals])
@@ -340,8 +331,8 @@ def run_gan_optimization(cmd_args):
             "iteration": iteration + 1,
             "d_loss": d_loss,
             "g_loss": g_loss,
-            "k1": current_k[0], #"k2": current_k[1], "k3": current_k[2],
-            "d1": current_d[0], #"d2": current_d[1], "d3": current_d[2]
+            "k1": current_k, # Store the scalar
+            "d1": current_d  # Store the scalar
         })
 
     save_results(history, D, config)
@@ -363,15 +354,12 @@ def save_results(history, D, config):
     ax1.legend()
     ax1.grid(True)
 
-    ax2.plot(df["iteration"], df["k1"], label="k1", marker='x', color='green')
-    ax2.plot(df["iteration"], df["k2"], label="k2", marker='x', color='lime')
-    ax2.plot(df["iteration"], df["k3"], label="k3", marker='x', color='darkgreen')
-    ax2.axhline(config["gt_k"][0], color='green', linestyle='--', label="GT k1")
+    ax2.plot(df["iteration"], df["k1"], label="k (estimated)", marker='x', color='green')
+    ax2.axhline(config["gt_k"], color='green', linestyle='--', label="GT k")
 
-    ax2.plot(df["iteration"], df["d1"], label="d1", marker='x', color='red')
-    ax2.plot(df["iteration"], df["d2"], label="d2", marker='x', color='orange')
-    ax2.plot(df["iteration"], df["d3"], label="d3", marker='x', color='brown')
-    ax2.axhline(config["gt_d"][0], color='red', linestyle='--', label="GT d1")
+    ax2.plot(df["iteration"], df["d1"], label="d (estimated)", marker='x', color='red')
+    ax2.axhline(config["gt_d"], color='red', linestyle='--', label="GT d")
+    
     ax2.set_title("Parameter Evolution")
     ax2.set_xlabel("GAN Iteration")
     ax2.set_ylabel("Parameter Value")
