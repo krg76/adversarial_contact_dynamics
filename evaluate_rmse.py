@@ -14,6 +14,8 @@ def compute_rmse(real_trajectories, fake_trajectories):
 def main(csv_files, output_file):
     # 1. Load the default configuration to ensure consistency with training
     config = at.get_default_config()
+    config["num_goals"] = 1
+    config["goal_dist_std"] = [0.0, 0.0, 0.0],
     
     # 2. Setup fixed noise and goals for a fair deterministic evaluation
     print("Setting up evaluation environment...")

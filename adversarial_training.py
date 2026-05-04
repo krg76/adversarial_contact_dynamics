@@ -50,13 +50,13 @@ def get_default_config():
         "g_max_iters": 10,
         "g_lr": 0.0025,
         "g_eps": 0.0001,
-        "g_reg": 1e-1,
-        "g_l2_weight": 1e-8,
+        "g_reg": 0,#1e-1,
+        "g_l2_weight": 1e-4,
         "init_k": [0.2, 0.01, 0.0005],
         "init_d": [0.01, 0.002, 0.0002],
-        "gt_k": [0.5, 0.005, 0.00005],
-        "gt_d": [0.001, 0.00001, 0.00000001],
-        "use_com_free_for_gt": False,
+        "gt_k": [0.5, 0.0, 0.0],
+        "gt_d": [0.001, 0.0, 0.0],
+        "use_com_free_for_gt": True,
         "output_dir": "./gan_comfree_tests_results"
     }
 
@@ -193,6 +193,7 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
         traj_array = np.array(generated_trajs)
         l2_penalty = np.mean((traj_array - gt_trajs)**2)
+        
 
         traj_tensor = torch.tensor(traj_array, dtype=torch.float32).to(device)
         with torch.no_grad():
