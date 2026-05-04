@@ -20,7 +20,7 @@ def main(csv_files, output_file):
     # 2. Setup fixed noise and goals for a fair deterministic evaluation
     print("Setting up evaluation environment...")
     np.random.seed(42)  # Fixed seed for goal sampling
-    goals = at.sample_goals(config)
+    goals = np.array(config["goal_dist_mean"])[np.newaxis, :]#at.sample_goals(config)
     
     rng = np.random.default_rng(seed=42)
     fixed_noise = np.zeros((int(config["mppi_samples"]), 3), dtype=np.float32)
@@ -55,8 +55,8 @@ def main(csv_files, output_file):
             run_name = row['run_name']
             
             # Extract the final k and d parameters
-            k_fake = [row['final_k1'], row['final_k2'], row['final_k3']]
-            d_fake = [row['final_d1'], row['final_d2'], row['final_d3']]
+            k_fake = [row['final_k1']]
+            d_fake = [row['final_d1']]
             
             print(f"  Evaluating {run_name} | k: {k_fake} | d: {d_fake}")
             

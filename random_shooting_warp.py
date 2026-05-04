@@ -29,7 +29,7 @@ TEMP         = 1
 MPPI_ITERS = 2  # Number of MPPI refinement loops
 
 # Box constraints for terminal position [x, y, z]
-BASKET_MOCAP_POS = np.array([-1.0, 0.0, 0.0])
+BASKET_MOCAP_POS = np.array([00, 0.0, 0.0])
 BOX_MIN = np.array([-1.0, -1.0, 0.0]) + BASKET_MOCAP_POS
 BOX_MAX = np.array([1.0, 1.0, 1.0]) + BASKET_MOCAP_POS
 TARGET_POS   = BASKET_MOCAP_POS
@@ -252,7 +252,7 @@ def main() -> None:
     mocap_idx = mj_model.body_mocapid[basket_body_id]
     mj_data.mocap_pos[mocap_idx] = BASKET_MOCAP_POS
     frames   = render_trajectory(
-        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=True
+        mj_model, mj_data, renderer, optimal_qvel, duration, fps, use_comfree=False
     )
     print(optimal_qvel)
 
