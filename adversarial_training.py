@@ -340,8 +340,8 @@ def run_gan_optimization(cmd_args):
             "iteration": iteration + 1,
             "d_loss": d_loss,
             "g_loss": g_loss,
-            "k1": current_k[0], "k2": current_k[1], "k3": current_k[2],
-            "d1": current_d[0], "d2": current_d[1], "d3": current_d[2]
+            "k1": current_k[0], #"k2": current_k[1], "k3": current_k[2],
+            "d1": current_d[0], #"d2": current_d[1], "d3": current_d[2]
         })
 
     save_results(history, D, config)
