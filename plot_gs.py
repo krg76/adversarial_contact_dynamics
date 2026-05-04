@@ -9,8 +9,10 @@ def calculate_error(row, gt_k, gt_d):
     Calculates the combined error for stiffness and damping.
     Using Euclidean distance (L2 norm) here.
     """
-    error_k = row['final_stiffness_k'] - gt_k
-    error_d = row['final_damping_d'] - gt_d
+    error_k = row['final_k1'] - gt_k
+    error_d = row['final_d1'] - gt_d
+    #error_k = row['final_k1'] - gt_k
+    #error_d = row['final_d1'] - gt_d
     return np.sqrt(error_k**2 + error_d**2)
 
 def generate_plots(csv_file="grid_search_parameters_summary.csv", gt_k=0.005, gt_d=0.00012):
@@ -59,10 +61,10 @@ def generate_plots(csv_file="grid_search_parameters_summary.csv", gt_k=0.005, gt
 if __name__ == "__main__":
     # --- USER SETTINGS ---
     # Set your exact Ground Truth values here
-    GROUND_TRUTH_STIFFNESS_K = 0.5   # Example value
-    GROUND_TRUTH_DAMPING_D = 0.002  # Example value
+    GROUND_TRUTH_STIFFNESS_K = 0.5   # Example value, 0.5
+    GROUND_TRUTH_DAMPING_D = 0.001  # Example value, 0.001 <-for first linear 
     
-    INPUT_CSV = "grid_search_parameters_summary.csv"
+    INPUT_CSV = "grid_search_parameters_summary_linear.csv"
     # ---------------------
     
     print(f"Analyzing {INPUT_CSV} using GT K={GROUND_TRUTH_STIFFNESS_K}, GT D={GROUND_TRUTH_DAMPING_D}...")

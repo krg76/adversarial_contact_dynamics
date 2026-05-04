@@ -79,7 +79,7 @@ def summarize_grid_search(base_directory=".", output_csv="grid_search_summary.cs
 if __name__ == "__main__":
     # You can change '.' to the absolute path of the directory containing your run folders
     # e.g., target_dir = "/path/to/your/experiments/"
-    target_dir = "results/nonliear_results" 
+    target_dir = "results/linear_results_2" 
     
     summarize_grid_search(
         base_directory=target_dir, 
