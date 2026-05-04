@@ -1,4 +1,5 @@
 import os
+import gc
 import argparse
 import copy
 import torch
@@ -14,6 +15,10 @@ import random_shooting_warp as rs
 import discriminator as disc
 import learn_params as lp
 import mujoco
+import warp as wp
+
+#wp.config.verify_cuda = True # Checks for OOB memory access synchronously
+#wp.config.verify_fp = True   # Checks for NaNs or Infinities in physics
 
 # ─── CONFIGURATION & GRID SEARCH SETUP ────────────────────────────────────────
 #python adversarial_training.py --disc_type "cnn"
@@ -39,7 +44,7 @@ def get_default_config():
         "num_goals": 10,
         "num_goals_gen_train": 5,
         "goal_dist_mean": [0.0, 0.0, 0.0],
-        "goal_dist_std": [1.0, 0.0, 0.0],
+        "goal_dist_std": [0.10, 0.0, 0.0],
         "gan_iterations": 20,
         "disc_type": "mlp",
         "d_epochs": 10,
@@ -51,11 +56,11 @@ def get_default_config():
         "g_lr": 0.0025,
         "g_eps": 0.0001,
         "g_reg": 0,#1e-1,
-        "g_l2_weight": 1e-4,
-        "init_k": [0.2, 0.01, 0.0005],
-        "init_d": [0.01, 0.002, 0.0002],
-        "gt_k": [0.5, 0.0, 0.0],
-        "gt_d": [0.001, 0.0, 0.0],
+        "g_l2_weight": 1e-8,
+        "init_k": 0.2,#[0.4, 0.0001, 0.00005],
+        "init_d": 0.01,#[0.01, 0.0002, 0.00002],
+        "gt_k": 0.5,#[0.5, 0.0005, 0.00005],
+        "gt_d": 0.001,#[0.001, 0.0001, 0.00001],
         "use_com_free_for_gt": True,
         "output_dir": "./gan_comfree_tests_results"
     }
@@ -165,7 +170,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     D.eval()
 
-    init_p = np.concatenate([np.array(current_k), np.array(current_d)])
+    #init_p = np.concatenate([np.array(current_k), np.array(current_d)])
+    init_p = np.concatenate([np.array([current_k]), np.array([current_d])])
     log_params = torch.tensor(
         np.log(init_p),
         dtype=torch.float64,
@@ -193,6 +199,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
         traj_array = np.array(generated_trajs)
         l2_penalty = np.mean((traj_array - gt_trajs)**2)
+        if np.isnan(l2_penalty).any():
+            l2_penalty = 1e10
         
 
         traj_tensor = torch.tensor(traj_array, dtype=torch.float32).to(device)
@@ -212,16 +220,21 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         log_p_np = log_params.detach().numpy()
         f0 = objective(log_p_np)
 
+        #print(f"DEBUG: Trying parameters (k, d): {np.exp(log_p_np)}")
+
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):
             p_plus = log_p_np.copy(); p_plus[i] += fd_eps
             grad_np[i] = (objective(p_plus) - f0) / (fd_eps)
 
         log_params.grad.copy_(torch.tensor(grad_np, dtype=torch.float64))
+        torch.nn.utils.clip_grad_norm_([log_params], max_norm=1.0)
         adam.step()
 
         with torch.no_grad():
-            log_params.clamp_(-25.0, 5.0)
+            log_params.clamp_(-25.0, 1.0)
+
+        gc.collect()
 
         p_curr = np.exp(log_p_np)
         k_str = ", ".join([f"{v:.2e}" for v in p_curr[:3]])

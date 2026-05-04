@@ -8,7 +8,7 @@ import comfree_warp as cf_mjwarp
 import comfree_warp.comfree_core._src.forward as cf_mj_src
 
 import comfree_forward_mod as cf_mod
-cf_mj_src._compute_qfrc_constraint = cf_mod._compute_qfrc_constraint
+#cf_mj_src._compute_qfrc_constraint = cf_mod._compute_qfrc_constraint
 
 import warp as wp
 import numpy as np
@@ -39,8 +39,8 @@ W_TERMINAL_POS = 100.0
 W_TERMINAL_VEL = 0.01
 
 # Comfree Warp parameters (if applicable)
-CF_STIFFNESS = np.array([0.5, 0.001, 0.001], dtype=np.float32)
-CF_DAMPING   = np.array([0.002, 0.00002, 0.000002], dtype=np.float32)
+CF_STIFFNESS = 0.5#np.array([0.5, 0.001, 0.001], dtype=np.float32)
+CF_DAMPING   = 0.001#np.array([0.002, 0.00002, 0.000002], dtype=np.float32)
 
 # Mocap configuration
 
@@ -59,8 +59,12 @@ def simulate_trajectories_parallel(
 
     # ── Reset: re-upload CPU data to get a clean GPU state ───────────────────
     if use_comfree:
-        cf_stiffness = np.tile(cf_stiffness, nworld)
-        cf_damping = np.tile(cf_damping, nworld)
+        # if len(cf_stiffness) > 1:
+        #     cf_stiffness = np.tile(cf_stiffness, nworld)
+        #     cf_damping = np.tile(cf_damping, nworld)
+        # else:
+        #     cf_stiffness = cf_stiffness[0]
+        #     cf_damping = cf_damping[0]
         engine = cf_mjwarp
         model = engine.put_model(mj_model,
             comfree_stiffness=cf_stiffness,
