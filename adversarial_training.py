@@ -50,12 +50,12 @@ def get_default_config():
         "gan_iterations": 20,
         "disc_type": "mlp",
         "d_epochs": 10,
-        "d_lr": 0.000225,
+        "d_lr": 0.0001,
         "d_batch_size": 16,
         "d_r1_gamma": 1e-3,          # ← NEW: set to 0.0 to disable R1 reg
         "g_optim_algo": "GD",
         "g_max_iters": 10,
-        "g_lr": 0.0025,
+        "g_lr": 0.00125,
         "g_eps": 0.0001,
         "g_reg": 0,#1e-1,
         "g_l2_weight": 1e-8,
@@ -245,8 +245,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
         gc.collect()
 
         p_curr = np.exp(log_p_np)
-        k_str = ", ".join([f"{v:.2e}" for v in p_curr[:3]])
-        d_str = ", ".join([f"{v:.2e}" for v in p_curr[3:]])
+        k_str = ", ".join([f"{v:.2e}" for v in p_curr[:1]])
+        d_str = ", ".join([f"{v:.2e}" for v in p_curr[1:]])
         print(f"  Step {step+1:>3d} | loss={f0:.6f} | k=[{k_str}], d=[{d_str}]")
 
         if f0 < best_loss:

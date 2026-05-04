@@ -10,6 +10,7 @@ import comfree_warp.comfree_core._src.forward as cf_mj_src
 
 import comfree_forward_mod as cf_mod
 #cf_mj_src._compute_qfrc_constraint = cf_mod._compute_qfrc_constraint
+using_non_linear = False
 
 import numpy as np
 import mediapy as media
