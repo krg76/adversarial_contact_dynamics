@@ -1,0 +1,8 @@
+/home/kg878/.conda/envs/MJW/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Traceback (most recent call last):
+  File "/home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics/adversarial_training.py", line 394, in <module>
+    run_gan_optimization(args)
+  File "/home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics/adversarial_training.py", line 343, in run_gan_optimization
+    "k1": current_k[0], "k2": current_k[1], "k3": current_k[2],
+IndexError: index 2 is out of bounds for axis 0 with size 2

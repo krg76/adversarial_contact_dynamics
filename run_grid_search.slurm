@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --partition=gpu
-#SBATCH --time=04:00:00
+#SBATCH --time=05:00:00
 
 cd /home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics
 module load miniconda
@@ -47,4 +47,4 @@ python /home/kg878/project_pi_amd78/kg878/Projects/adversarial_contact_dynamics/
     --d_lr "$SEL_LR_D" \
     --g_lr "$SEL_LR_G" \
     --output_dir "$OUT_DIR" \
-    --gan_iterations 20
+    --gan_iterations 30
