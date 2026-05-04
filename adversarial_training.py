@@ -16,6 +16,8 @@ import discriminator as disc
 import learn_params as lp
 import mujoco
 import warp as wp
+import mujoco_warp as mw
+import comfree_warp as cf_mjwarp
 
 #wp.config.verify_cuda = True # Checks for OOB memory access synchronously
 #wp.config.verify_fp = True   # Checks for NaNs or Infinities in physics
@@ -181,9 +183,16 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
     adam = torch.optim.SGD([log_params], lr=config["g_lr"])
     fd_eps = config["g_eps"]
 
+    warp_model = cf_mjwarp.put_model(mj_model,
+        comfree_stiffness=init_p[0],
+        comfree_damping=init_p[1])
+    warp_data = cf_mjwarp.put_data(mj_model, mj_data, nworld=config["mppi_samples"])
+
     def objective(log_p: np.ndarray) -> float:
+        k = float(np.clip(np.exp(log_p_np[0]), 1e-4, 50.0))   # stiffness bounds
+        d = float(np.clip(np.exp(log_p_np[1]), 1e-6, 5.0))    # damping bounds
         p = np.exp(log_p)
-        k, d = p[:3], p[3:]
+        k, d = p[0], p[1]
         generated_trajs = []
         for goal in goals:
             base_qvel = goal - starting_pos
@@ -218,9 +227,8 @@ def optimize_parameters(D, config, goals, current_k, current_d, fixed_noise):
 
     for step in range(config["g_max_iters"]):
         log_p_np = log_params.detach().numpy()
-        f0 = objective(log_p_np)
-
         #print(f"DEBUG: Trying parameters (k, d): {np.exp(log_p_np)}")
+        f0 = objective(log_p_np)
 
         grad_np = np.zeros_like(log_p_np)
         for i in range(len(log_p_np)):

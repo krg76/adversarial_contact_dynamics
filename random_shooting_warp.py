@@ -1,6 +1,7 @@
 import os
 os.environ["MUJOCO_GL"] = "egl"   # must be set before importing mujoco
 
+import warp as wp
 import mujoco
 import mujoco_warp as mw
 import comfree_warp as cf_mjwarp
@@ -10,10 +11,10 @@ import comfree_warp.comfree_core._src.forward as cf_mj_src
 import comfree_forward_mod as cf_mod
 #cf_mj_src._compute_qfrc_constraint = cf_mod._compute_qfrc_constraint
 
-import warp as wp
 import numpy as np
 import mediapy as media
 import math
+import torch
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -46,48 +47,48 @@ CF_DAMPING   = 0.001#np.array([0.002, 0.00002, 0.000002], dtype=np.float32)
 
 
 def simulate_trajectories_parallel(
-    mj_model: mujoco.MjModel,
-    mj_data: mujoco.MjData,       # <-- add this
-    initial_qvels: np.ndarray,
-    duration: float,
-    cf_stiffness: float = CF_STIFFNESS,
-    cf_damping: float = CF_DAMPING,
-    use_comfree: bool = True,
-) -> tuple[np.ndarray, np.ndarray]:
-    nworld    = initial_qvels.shape[0]
+    mj_model, mj_data, initial_qvels, duration,
+    cf_stiffness=CF_STIFFNESS, cf_damping=CF_DAMPING,
+    use_comfree=True,
+    warp_model=None,   # <-- accept pre-built objects
+    warp_data=None,
+):
+    nworld = initial_qvels.shape[0]
     num_steps = math.ceil(duration / mj_model.opt.timestep)
 
-    # ── Reset: re-upload CPU data to get a clean GPU state ───────────────────
-    if use_comfree:
-        # if len(cf_stiffness) > 1:
-        #     cf_stiffness = np.tile(cf_stiffness, nworld)
-        #     cf_damping = np.tile(cf_damping, nworld)
-        # else:
-        #     cf_stiffness = cf_stiffness[0]
-        #     cf_damping = cf_damping[0]
-        engine = cf_mjwarp
-        model = engine.put_model(mj_model,
-            comfree_stiffness=cf_stiffness,
-            comfree_damping=cf_damping)
+    rebuild_model = warp_model is None
+    if rebuild_model:
+        engine = cf_mjwarp if use_comfree else mw
+        if use_comfree:
+            warp_model = engine.put_model(mj_model,
+                comfree_stiffness=cf_stiffness,
+                comfree_damping=cf_damping)
+        else:
+            warp_model = engine.put_model(mj_model)
+        warp_data = engine.put_data(mj_model, mj_data, nworld=nworld)
     else:
-        engine = mw
-        model = engine.put_model(mj_model)
+        engine = cf_mjwarp if use_comfree else mw
 
-    data = engine.put_data(mj_model, mj_data, nworld=nworld)  # replaces mj_resetData
+    #print(CF_STIFFNESS,CF_DAMPING)
 
-    # ── Set per-world initial velocities ──────────────────────────────────────
+    # reset state
     qvel_np = np.zeros((nworld, mj_model.nv), dtype=np.float32)
     qvel_np[:, :3] = initial_qvels.astype(np.float32)
-    data.qvel.assign(qvel_np)
+    warp_data.qvel.assign(qvel_np)
+    # also reset positions to match mj_data
+    qpos_np = np.tile(mj_data.qpos.astype(np.float32), (nworld, 1))
+    warp_data.qpos.assign(qpos_np)
 
-    # ── Pre-allocate output buffers ───────────────────────────────────────────
     all_positions  = np.empty((nworld, num_steps, 3), dtype=np.float32)
     all_velocities = np.empty((nworld, num_steps, 3), dtype=np.float32)
 
     for step in range(num_steps):
-        engine.step(model, data)
-        all_positions[:, step, :]  = data.qpos.numpy()[:, :3]
-        all_velocities[:, step, :] = data.qvel.numpy()[:, :3]
+        engine.step(warp_model, warp_data)
+        wp.synchronize()
+        #print(torch.cuda.memory_summary())
+        #print(step,warp_data.qpos.numpy())
+        all_positions[:, step, :]  = warp_data.qpos.numpy()[:, :3]
+        all_velocities[:, step, :] = warp_data.qvel.numpy()[:, :3]
 
     return all_positions, all_velocities
 
