@@ -54,7 +54,7 @@ def get_default_config():
         "d_batch_size": 16,
         "d_r1_gamma": 1e-3,          # ← NEW: set to 0.0 to disable R1 reg
         "g_optim_algo": "GD",
-        "g_max_iters": 2,#10,
+        "g_max_iters": 10,#10,
         "g_lr": 0.00125,
         "g_eps": 0.0001,
         "g_reg": 0,#1e-1,
