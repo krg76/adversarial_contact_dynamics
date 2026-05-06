@@ -126,11 +126,11 @@ def plot_comparisons(pos_cf, vel_cf, pos_mj, vel_mj, duration):
     fig, (ax1) = plt.subplots(1, 1, figsize=(14, 6))
 
     # Plot 1: Trajectory (X vs Z)
-    ax1.plot(pos_cf[:, 0], pos_cf[:, 2], label='ComFree Sim', color='#1f77b4', linewidth=2)
-    ax1.plot(pos_mj[:, 0], pos_mj[:, 2], label='Standard MuJoCo', color='#ff7f0e', linestyle='--', linewidth=2)
+    ax1.plot(pos_cf[:, 0], pos_cf[:, 2], label='ComFree Sim', color='#ff7f0e', linestyle='--', linewidth=2)
+    ax1.plot(pos_mj[:, 0], pos_mj[:, 2], label='Standard MuJoCo', color='#1f77b4', linewidth=2)
     ax1.set_xlabel('X Position (m)')
     ax1.set_ylabel('Z Position (m)')
-    ax1.set_title('Optimal Trajectory Comparison (X-Z Plane)')
+    ax1.set_title('Optimal Trajectory Comparison')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
