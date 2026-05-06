@@ -28,11 +28,11 @@ import comfree_warp as cf_mjwarp
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--d_lr", type=float, default=0.00025)
-    parser.add_argument("--g_lr", type=float, default=0.0025)
+    parser.add_argument("--g_lr", type=float, default=0.005)#slightly doubled
     parser.add_argument("--g_l2_weight", type=float, default=1e-5)
     parser.add_argument("--g_reg", type=float, default=0.1)
     parser.add_argument("--disc_type", type=str, choices=["lstm", "cnn", "mlp"], default="lstm")
-    parser.add_argument("--output_dir", type=str, default="./gan_results")
+    parser.add_argument("--output_dir", type=str, default="./gan_results_100")
     parser.add_argument("--gan_iterations", type=int, default=20)
     # Add any other config keys you wish to tune here
     return parser.parse_args()

@@ -123,7 +123,7 @@ def plot_comparisons(pos_cf, vel_cf, pos_mj, vel_mj, duration):
     """Generates the comparison plots for trajectories and velocities."""
     time_steps = np.linspace(0, duration, pos_cf.shape[0])
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    fig, (ax1) = plt.subplots(1, 1, figsize=(14, 6))
 
     # Plot 1: Trajectory (X vs Z)
     ax1.plot(pos_cf[:, 0], pos_cf[:, 2], label='ComFree Sim', color='#1f77b4', linewidth=2)
@@ -135,13 +135,13 @@ def plot_comparisons(pos_cf, vel_cf, pos_mj, vel_mj, duration):
     ax1.grid(True, alpha=0.3)
 
     # Plot 2: Velocity Profile (Z-Velocity over time)
-    ax2.plot(time_steps, vel_cf[:, 2], label='ComFree Sim Z-Vel', color='#1f77b4', linewidth=2)
-    ax2.plot(time_steps, vel_mj[:, 2], label='Standard MuJoCo Z-Vel', color='#ff7f0e', linestyle='--', linewidth=2)
-    ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('Z Velocity (m/s)')
-    ax2.set_title('Vertical Velocity Profile over Time')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    # ax2.plot(time_steps, vel_cf[:, 2], label='ComFree Sim Z-Vel', color='#1f77b4', linewidth=2)
+    # ax2.plot(time_steps, vel_mj[:, 2], label='Standard MuJoCo Z-Vel', color='#ff7f0e', linestyle='--', linewidth=2)
+    # ax2.set_xlabel('Time (s)')
+    # ax2.set_ylabel('Z Velocity (m/s)')
+    # ax2.set_title('Vertical Velocity Profile over Time')
+    # ax2.legend()
+    # ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
     plt.savefig('pipeline_comparison.png', dpi=300)
@@ -193,6 +193,8 @@ def main():
 
     # 3. Generate the visualization
     plot_comparisons(pos_cf[0], vel_cf[0], pos_mj[0], vel_mj[0], duration)
+
+    print("RMSE:",np.sqrt(np.sum( (pos_cf[0] - pos_mj[0]) ** 2 )))
 
 
 if __name__ == "__main__":
