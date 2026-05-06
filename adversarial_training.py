@@ -28,7 +28,7 @@ import comfree_warp as cf_mjwarp
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--d_lr", type=float, default=0.00025)
-    parser.add_argument("--g_lr", type=float, default=0.05)
+    parser.add_argument("--g_lr", type=float, default=0.0025)
     parser.add_argument("--g_l2_weight", type=float, default=1e-5)
     parser.add_argument("--g_reg", type=float, default=0.1)
     parser.add_argument("--disc_type", type=str, choices=["lstm", "cnn", "mlp"], default="lstm")
@@ -47,7 +47,7 @@ def get_default_config():
         "num_goals_gen_train": 5,
         "goal_dist_mean": [0.0, 0.0, 0.0],
         "goal_dist_std": [1.0, 0.0, 0.0],
-        "gan_iterations": 20,
+        "gan_iterations": 100,
         "disc_type": "lstm",
         "d_epochs": 10,
         "d_lr": 0.00025,
